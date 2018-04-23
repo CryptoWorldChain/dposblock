@@ -48,8 +48,8 @@ object RTask_DutyTermVote extends LogHelper {
         case Converge(n) =>
           log.debug("converge:" + n);
           if (n == VoteResult.VR_GRANTED) {
-            log.debug("Vote Granted will be the new terms:" + n);
-            DCtrl.instance.term_Miner = DCtrl.instance.vote_Request
+            log.debug("Vote Granted will be the new terms:" + vq);
+            DCtrl.instance.term_Miner = vq.clone()
             DCtrl.instance.updateTerm()
             true
           } else if (n == VoteResult.VR_REJECT) {
@@ -104,6 +104,7 @@ object RTask_DutyTermVote extends LogHelper {
     val vq = DCtrl.voteRequest()
     if (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
       && vq.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock
+      && vq.getBlockRange.getStartBlock >= cn.getCurBlock
       && vq.getTermId > 0
       || (StringUtils.isNotBlank(vq.getLastTermUid) && vq.getLastTermUid.equals(tm.getMessageId))) {
       checkVoteDB(vq)

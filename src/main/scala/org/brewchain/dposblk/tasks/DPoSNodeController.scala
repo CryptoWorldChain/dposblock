@@ -101,6 +101,8 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
           + ",N=" + cur_dnode.getNodeCount
           + ",RN=" + network.bitenc.bits.bitCount
           + ",TN=" + cur_dnode.getTxcount + ",DU=" + cur_dnode.getDutyUid
+          + ",VT=" + vote_Request.getTermId
+          + ",TM=" + term_Miner.getTermId
           + ",VU=" + vote_Request.getLastTermUid
           + ",NextSec=" + JodaTimeHelper.secondFromNow(cur_dnode.getDutyEndMs)
           + ",SecPass=" + JodaTimeHelper.secondFromNow(cur_dnode.getLastDutyTime));
@@ -126,9 +128,10 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
             }
           case DNodeState.DN_DUTY_MINER =>
             if (RTask_MineBlock.runOnce) {
-              if (cur_dnode.getCurBlock == DCtrl.voteRequest().getBlockRange.getEndBlock) {
+              if (cur_dnode.getCurBlock >= DCtrl.voteRequest().getBlockRange.getEndBlock
+                  ||term_Miner.getTermId<vote_Request.getTermId) {
                 log.debug("cur term WILL end:newblk=" + cur_dnode.getCurBlock + ",term[" + DCtrl.voteRequest().getBlockRange.getStartBlock
-                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]");
+                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]"+",T="+term_Miner.getTermId);
                 continue = true;
                 val sleept = Math.abs((Math.random() * DConfig.DTV_TIME_MS_EACH_BLOCK).asInstanceOf[Long]) + 10;
                 log.debug("Duty_Miner To CoMiner:sleep=" + sleept)

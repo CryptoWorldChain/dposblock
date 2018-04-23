@@ -54,7 +54,7 @@ object RTask_CoMine extends LogHelper with BitMap {
                     fastNode = retjoin.getDn;
                   }
                 }
-                log.debug("get other nodeInfo:B=" + retjoin.getDn.getCurBlock+",state="+retjoin.getCoResult);
+                log.debug("get other nodeInfo:B=" + retjoin.getDn.getCurBlock + ",state=" + retjoin.getCoResult);
                 if (retjoin.getCoResult == DNodeState.DN_CO_MINER) {
                   DCtrl.coMinerByUID.put(retjoin.getDn.getBcuid, retjoin.getDn);
                 }
@@ -80,8 +80,7 @@ object RTask_CoMine extends LogHelper with BitMap {
       DCtrl.coMinerByUID.remove(p._1);
     }
 
-    if (fastNode != cn && DCtrl.coMinerByUID.size >= network.directNodes.size * 2 / 3
-      && cn.getCurBlock < fastNode.getCurBlock) {
+    if (fastNode != cn && cn.getCurBlock < fastNode.getCurBlock) {
       cn.setState(DNodeState.DN_SYNC_BLOCK)
       BlockSync.trySyncBlock(fastNode.getCurBlock, fastNode.getBcuid);
       fastNode

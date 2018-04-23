@@ -47,7 +47,8 @@ object RTask_MineBlock extends LogHelper with BitMap {
         network.dwallMessage("MINDOB", Left(newblock.build()), msgid)
         true
       } else {
-        log.debug("waiting for my mine block:" + (cn.getCurBlock + 1)  + ",CO=" + cn.getCoAddress);
+        log.debug("waiting for my mine block:" + (cn.getCurBlock + 1)  + ",CO=" + cn.getCoAddress
+            +",TU="+DCtrl.termMiner().getLastTermUid);
         false
       }
     }

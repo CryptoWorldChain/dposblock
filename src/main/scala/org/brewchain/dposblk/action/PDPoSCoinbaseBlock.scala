@@ -36,7 +36,7 @@ class PDPoSCoinbaseBlock extends PSMDPoSNet[PSCoinbase] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PSCoinbase] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSCoinbase, handler: CompleteHandler) = {
-    log.debug("Mine Server::" + pack.getFrom())
+    log.debug("Mine Block From::" + pack.getFrom())
     var ret = PRetCoinbase.newBuilder();
     if (!DCtrl.isReady()) {
       log.debug("DCtrl not ready");
@@ -51,24 +51,24 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
         val cn = DCtrl.curDN()
         ret.setRetCode(0).setRetMessage("SUCCESS")
 
-        if (StringUtils.equals(pbo.getCoAddress, cn.getCoAddress) || pbo.getBlockHeight > cn.getCurBlock ) {
-          if (DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress,pbo.getMineTime)) {
-            log.debug("Miner is OK:B=" + pbo.getBlockHeight + ",CoAddr=" + pbo.getCoAddress);
+        if (StringUtils.equals(pbo.getCoAddress, cn.getCoAddress) || pbo.getBlockHeight > cn.getCurBlock) {
+          if (DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress, pbo.getMineTime)) {
+            log.debug("Miner is OK:B=" + pbo.getBlockHeight + ",CoAddr=" + pbo.getCoAddress
+              + ",T=" + pbo.getTermId + ",CT=" + DCtrl.termMiner().getTermId + ",TU=" + DCtrl.termMiner().getSign
+              + ",CB=" + cn.getCurBlock);
             ret.setResult(CoinbaseResult.CR_PROVEN)
-//            if (pbo.getBlockHeight != cn.getCurBlock) {
-              DCtrl.saveBlock(PBlockEntry.newBuilder().setBlockHeader(pbo.getBlockHeader.toByteString())
-                   .setBlockHeight(pbo.getBlockHeight)
-                   .setCoinbaseBcuid(pbo.getCoAddress)
-                   .setSign(pbo.getMessageId)
-                   .setSliceId(pbo.getSliceId)
-              )
-              if(pbo.getBlockHeight>cn.getCurBlock)
-              {
-                cn.setCurBlock(pbo.getBlockHeight)
-                DCtrl.instance.syncToDB();
-              }
-              
-//            }
+            //            if (pbo.getBlockHeight != cn.getCurBlock) {
+            DCtrl.saveBlock(PBlockEntry.newBuilder().setBlockHeader(pbo.getBlockHeader.toByteString())
+              .setBlockHeight(pbo.getBlockHeight)
+              .setCoinbaseBcuid(pbo.getCoAddress)
+              .setSign(pbo.getMessageId)
+              .setSliceId(pbo.getSliceId))
+            if (pbo.getBlockHeight > cn.getCurBlock) {
+              cn.setCurBlock(pbo.getBlockHeight)
+              DCtrl.instance.syncToDB();
+            }
+
+            //            }
           } else {
             log.debug("Miner not for the block:Block=" + pbo.getBlockHeight + ",CA=" + pbo.getCoAddress);
             ret.setResult(CoinbaseResult.CR_REJECT)
