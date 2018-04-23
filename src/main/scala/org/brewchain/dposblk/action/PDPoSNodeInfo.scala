@@ -16,10 +16,13 @@ import onight.tfw.otransio.api.beans.FramePacket
 import onight.tfw.async.CompleteHandler
 import org.brewchain.bcapi.utils.PacketIMHelper._
 import org.brewchain.dposblk.pbgens.Dposblock.PSNodeInfo
-import org.fc.brewchain.p22p.pbgens.P22P.PRetNodeInfo
 import onight.tfw.otransio.api.PacketHelper
 import org.fc.brewchain.bcapi.exception.FBSException
 import org.brewchain.dposblk.pbgens.Dposblock.PCommand
+import org.brewchain.dposblk.pbgens.Dposblock.PRetNodeInfo
+import org.brewchain.dposblk.tasks.DCtrl
+import scala.collection.JavaConversions._
+import org.brewchain.dposblk.pbgens.Dposblock.PDNode
 
 @NActorProvider
 @Instantiate
@@ -34,7 +37,7 @@ object PDPoSNodeInfoService extends LogHelper with PBUtils with LService[PSNodeI
   override def onPBPacket(pack: FramePacket, pbo: PSNodeInfo, handler: CompleteHandler) = {
     log.debug("onPBPacket::" + pbo)
     var ret = PRetNodeInfo.newBuilder();
-    val network = networkByID("raft")
+    val network = networkByID("dpos")
     if (network == null) {
       ret.setRetCode(-1).setRetMessage("unknow network:")
       handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
@@ -42,20 +45,15 @@ object PDPoSNodeInfoService extends LogHelper with PBUtils with LService[PSNodeI
       try {
         MDCSetBCUID(network);
         //       pbo.getMyInfo.getNodeName
-        ret.setCurrent(toPMNode(network.root()))
-        val pending = network.pendingNodes;
-        val directNodes = network.directNodes;
-        log.debug("pending=" + network.pendingNodes.size + "::" + network.pendingNodes)
-        //      ret.addNodes(toPMNode(NodeInstance.curnode));
-        pending.map { _pn =>
-          log.debug("pending==" + _pn)
-          ret.addPnodes(toPMNode(_pn));
+        ret.setDn(DCtrl.curDN())
+        DCtrl.termMiner().getMinerQueueList.map { tm =>
+          log.debug("termMiner==" + tm)
+          ret.addCoNodes(PDNode.newBuilder().setCoAddress(tm.getMinerCoaddr))
         }
-        directNodes.map { _pn =>
-          log.debug("directnodes==" + _pn)
-          ret.addDnodes(toPMNode(_pn));
-        }
-        ret.setBitEncs(network.node_strBits);
+        DCtrl.coMinerByUID.map(kvs=>{
+          val pn = kvs._2
+          ret.addBackNodes(pn)
+        })
       } catch {
         case e: FBSException => {
           ret.clear()

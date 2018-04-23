@@ -21,6 +21,8 @@ import org.brewchain.dposblk.tasks.DCtrl
 import onight.tfw.otransio.api.PacketHelper
 import org.fc.brewchain.bcapi.exception.FBSException
 import org.brewchain.dposblk.pbgens.Dposblock.DNodeState
+import org.apache.commons.lang3.StringUtils
+import org.brewchain.dposblk.utils.DConfig
 
 @NActorProvider
 @Instantiate
@@ -33,9 +35,11 @@ class PDPoSNodeCoMine extends PSMDPoSNet[PSCoMine] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PDPoSNodeCoMineService extends LogHelper with PBUtils with LService[PSCoMine] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSCoMine, handler: CompleteHandler) = {
-    log.debug("PDPoSNodeJoinService::" + pack.getFrom())
+    log.debug("from::" + pack.getFrom())
     var ret = PRetCoMine.newBuilder();
-    if (!DCtrl.isReady()) {
+    if (!DCtrl.isReady() && !StringUtils.equals(pbo.getDn.getCoAddress,
+      DCtrl.curDN().getCoAddress)) {
+      log.debug("DPoS not ready" + pack.getFrom())
       ret.setRetCode(-1).setRetMessage("DPoS Network Not READY")
       handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
     } else {
@@ -48,18 +52,21 @@ object PDPoSNodeCoMineService extends LogHelper with PBUtils with LService[PSCoM
         val cn = DCtrl.curDN()
         ret.setRetCode(0).setRetMessage("SUCCESS").setDn(cn);
 
-        DCtrl.coMinerByUID.map { f =>
-          ret.addCoNodes(f._2)
-        }
-
-        if (pbo.getDn.getCurBlock >= cn.getCurBlock) {
+        if (pbo.getDn.getCurBlock >= cn.getCurBlock - DConfig.BLOCK_DISTANCE_COMINE) {
           ret.setCoResult(DNodeState.DN_CO_MINER)
+          DCtrl.coMinerByUID.map { f =>
+            ret.addCoNodes(f._2)
+          }
+          DCtrl.coMinerByUID.put(pbo.getDn.getBcuid, pbo.getDn)
         } else {
           ret.setCoResult(DNodeState.DN_SYNC_BLOCK)
         }
-        
+        log.debug("Join:Success for bcuid=" + pack.getFrom() + ",coresult=" + ret.getCoResult)
+
       } catch {
         case e: FBSException => {
+          log.error("error:", e);
+
           ret.clear()
           ret.setRetCode(-2).setRetMessage(e.getMessage)
         }

@@ -12,7 +12,7 @@ public class ODSBlkDao extends ODBDao {
 
 	@Override
 	public String getDomainName() {
-		return "dposblk";
+		return "dpos.blk";
 	}
 
 	

@@ -33,33 +33,25 @@ case class RTask_SyncBlock(startIdx: Int, endIdx: Int,
       if (n == null) {
         log.warn("cannot found node from Network:" + network.netid + ",bcuid=" + fastNodeID)
       }
-      
+
       network.sendMessage("SYNDOB", sync, n, new CallBack[FramePacket] {
         def onSuccess(fp: FramePacket) = {
           val end = System.currentTimeMillis();
           log.debug("send SYNDOB success:to " + n.uri + ",cost=" + (end - start))
           val ret = PRetSyncBlocks.newBuilder().mergeFrom(fp.getBody);
           if (ret.getRetCode() == 0) { //same message
-            var maxid: Long = 0
-            val realmap = ret.getBlockHeadersList.map { b => (b, PBlockEntry.newBuilder().mergeFrom(b)) }
-              .filter { p => p._2.getBlockHeight >= startIdx && p._2.getBlockHeight <= endIdx }
+
+            var maxid: Int = 0
+            val realmap = ret.getBlockHeadersList.filter { p => p.getBlockHeight >= startIdx && p.getBlockHeight <= endIdx }
             //            if (realmap.size() == endIdx - startIdx + 1) {
-            realmap.map { p =>
-              val b = p._1;
-              val loge = p._2;
-              log.debug("get bock height=" + loge.getBlockHeight);
-              Daos.dposdb.put("D" + loge.getBlockHeight, OValue.newBuilder()
-                  .setCount(b.getBlockHeight)
-                  .setInfo(b.getSign)
-                  .setNonce(b.getSliceId)
-                  .setSecondKey(b.getCoinbaseBcuid)
-                  .setExtdata(b.getBlockHeader).build())
-              log.info("set sync bock height=" + loge.getBlockHeight + ".........[OK]");
-              if (loge.getBlockHeight > maxid) {
-                maxid = loge.getBlockHeight;
+            realmap.map { b =>
+              log.debug("get bock height=" + b.getBlockHeight);
+              DCtrl.saveBlock(b);
+              if (b.getBlockHeight > maxid) {
+                maxid = b.getBlockHeight;
               }
             }
-            
+            DCtrl.instance.updateBlockHeight(maxid)
             //!! DCtrl.instance.updateLastApplidId(maxid);
             //            } else {
             //              log.warn("cannot get enough entries:wanted:" + startIdx + "-->" + endIdx + ",returnsize=" +

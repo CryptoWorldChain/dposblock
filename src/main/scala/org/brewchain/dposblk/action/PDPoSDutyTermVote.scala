@@ -24,6 +24,7 @@ import onight.tfw.otransio.api.PacketHelper
 import org.apache.commons.lang3.StringUtils
 import org.fc.brewchain.bcapi.exception.FBSException
 import org.brewchain.dposblk.pbgens.Dposblock.PDutyTermResult.VoteResult
+import org.brewchain.dposblk.tasks.BlockSync
 
 @NActorProvider
 @Instantiate
@@ -38,31 +39,65 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
   override def onPBPacket(pack: FramePacket, pbo: PSDutyTermVote, handler: CompleteHandler) = {
     log.debug("DPoS DutyTermVoteService::" + pack.getFrom())
     var ret = PDutyTermResult.newBuilder();
-    if (!DCtrl.isReady()) {
+    val net = DCtrl.instance.network;
+    if (!DCtrl.isReady() || net == null) {
       ret.setRetCode(-1).setRetMessage("DPoS Network Not READY")
       handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
     } else {
       try {
         MDCSetBCUID(DCtrl.dposNet())
         MDCSetMessageID(pbo.getMessageId)
-        ret.setMessageId(pbo.getMessageId);
-        ret.setRetCode(0).setRetMessage("SUCCESS")
         val cn = DCtrl.curDN()
+
+        ret.setMessageId(pbo.getMessageId);
+        ret.setBcuid(cn.getBcuid)
+        ret.setRetCode(0).setRetMessage("SUCCESS")
         val vq = DCtrl.voteRequest();
         //
         this.synchronized({
-          if (
-              (StringUtils.isBlank(cn.getDutyUid) || cn.getDutyUid.equals(pbo.getLastTermUid) )
-          &&    (StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid) )
-          &&    (vq.getTermId==pbo.getLastTermId) 
-          ) {
-            // 
-            ret.setResult(VoteResult.VR_GRANTED)
-            DCtrl.instance.updateVoteReq(pbo);
+          if ((StringUtils.isBlank(cn.getDutyUid) || cn.getDutyUid.equals(pbo.getLastTermUid))
+            //&& (StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
+            && (vq.getTermId <= pbo.getLastTermId)
+            || StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) {
+            if (cn.getCurBlock < pbo.getBlockRange.getStartBlock - 1) {
+              log.debug("Grant DPos Term Vote but Block Height Not Ready:" + cn.getDutyUid + ",T=" + pbo.getTermId
+                + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
+                + ",B=" + cn.getCurBlock + ",BS=[" + pbo.getBlockRange.getStartBlock+"," + pbo.getBlockRange.getEndBlock
+                + "],VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid
+                + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress);
+              ret.setResult(VoteResult.VR_GRANTED)
+              ret.setTermId(pbo.getTermId)
+              ret.setSign(pbo.getSign)
+              ret.setVoteAddress(cn.getCoAddress)
+              DCtrl.instance.updateVoteReq(pbo);
+              BlockSync.tryBackgroundSyncLogs(pbo.getBlockRange.getStartBlock - 1, pbo.getBcuid)(net)
+            } else {
+              // 
+              log.debug("Grant DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
+                + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
+                + ",VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid
+                + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress);
+              ret.setResult(VoteResult.VR_GRANTED)
+              ret.setTermId(pbo.getTermId)
+              ret.setSign(pbo.getSign)
+              ret.setVoteAddress(cn.getCoAddress)
+              DCtrl.instance.updateVoteReq(pbo);
+            }
+            //
+          } else {
+            log.debug("Reject DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
+              + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
+              + ",VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid
+              + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress);
+            ret.setResult(VoteResult.VR_REJECT)
+            ret.setTermId(pbo.getTermId)
+            ret.setSign(pbo.getSign)
+            ret.setVoteAddress(cn.getCoAddress)
+            //
           }
         })
+        net.dwallMessage("DTRDOB", Left(ret.build()), pbo.getMessageId);
         //        }
-
 
       } catch {
         case e: FBSException => {

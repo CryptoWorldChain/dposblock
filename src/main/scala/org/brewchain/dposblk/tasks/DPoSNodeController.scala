@@ -16,11 +16,16 @@ import org.brewchain.dposblk.pbgens.Dposblock.PSDutyTermVote
 import org.brewchain.dposblk.pbgens.Dposblock.PDNodeOrBuilder
 import org.brewchain.dposblk.pbgens.Dposblock.PSDutyTermVoteOrBuilder
 import org.brewchain.dposblk.pbgens.Dposblock.PDutyTermResult
+import org.brewchain.dposblk.utils.DConfig
+import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntry
+import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntryOrBuilder
 
+import scala.collection.JavaConversions._
 //投票决定当前的节点
 case class DPosNodeController(network: Network) extends SRunner with LogHelper {
   def getName() = "DCTRL"
   val DPOS_NODE_DB_KEY = "CURRENT_DPOS_KEY";
+  val DPOS_NODE_DB_TERM = "CURRENT_DPOS_TERM";
   var cur_dnode: PDNode.Builder = PDNode.newBuilder()
   var term_Miner: PSDutyTermVote.Builder = PSDutyTermVote.newBuilder();
   var vote_Request: PSDutyTermVote.Builder = PSDutyTermVote.newBuilder();
@@ -46,6 +51,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
     if (ov == null) {
       cur_dnode.setBcuid(root_node.bcuid)
         .setCurBlock(1).setCoAddress(root_node.v_address)
+        .setBitIdx(root_node.node_idx)
       Daos.dposdb.put(DPOS_NODE_DB_KEY,
         OValue.newBuilder().setExtdata(cur_dnode.build().toByteString()).build())
     } else {
@@ -56,14 +62,27 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
         log.info("load from db:OK" + cur_dnode)
       }
     }
+
+    val termov = Daos.dposdb.get(DPOS_NODE_DB_TERM).get
+    if (termov == null) {
+      Daos.dposdb.put(DPOS_NODE_DB_TERM,
+        OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
+    } else {
+      term_Miner.mergeFrom(termov.getExtdata)
+    }
     cur_dnode
   }
   def syncToDB() {
     Daos.dposdb.put(DPOS_NODE_DB_KEY,
       OValue.newBuilder().setExtdata(cur_dnode.build().toByteString()).build())
   }
+  def updateTerm() = {
+    Daos.dposdb.put(DPOS_NODE_DB_TERM,
+      OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
+  }
   def updateBlockHeight(blockHeight: Int) = {
     if (cur_dnode.getCurBlock < blockHeight) {
+      cur_dnode.setLastBlockTime(System.currentTimeMillis())
       cur_dnode.setCurBlock(blockHeight)
       syncToDB()
     }
@@ -82,6 +101,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
           + ",N=" + cur_dnode.getNodeCount
           + ",RN=" + network.bitenc.bits.bitCount
           + ",TN=" + cur_dnode.getTxcount + ",DU=" + cur_dnode.getDutyUid
+          + ",VU=" + vote_Request.getLastTermUid
           + ",NextSec=" + JodaTimeHelper.secondFromNow(cur_dnode.getDutyEndMs)
           + ",SecPass=" + JodaTimeHelper.secondFromNow(cur_dnode.getLastDutyTime));
         cur_dnode.getState match {
@@ -105,12 +125,29 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
               cur_dnode.setState(DNodeState.DN_DUTY_MINER);
             }
           case DNodeState.DN_DUTY_MINER =>
-            RTask_MineBlock.runOnce
-            if (cur_dnode.getCurBlock > vote_Request.getBlockRange.getEndBlock) {
-              //continue = true;
-              //
-              Thread.sleep(Math.abs((Math.random() * 1000).asInstanceOf[Long]) + 10);
-              cur_dnode.setState(DNodeState.DN_CO_MINER);
+            if (RTask_MineBlock.runOnce) {
+              if (cur_dnode.getCurBlock == DCtrl.voteRequest().getBlockRange.getEndBlock) {
+                log.debug("cur term WILL end:newblk=" + cur_dnode.getCurBlock + ",term[" + DCtrl.voteRequest().getBlockRange.getStartBlock
+                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]");
+                continue = true;
+                val sleept = Math.abs((Math.random() * DConfig.DTV_TIME_MS_EACH_BLOCK).asInstanceOf[Long]) + 10;
+                log.debug("Duty_Miner To CoMiner:sleep=" + sleept)
+                cur_dnode.setState(DNodeState.DN_CO_MINER);
+                Thread.sleep(sleept);
+                true
+              } else {
+                log.debug("cur term NOT end:newblk=" + cur_dnode.getCurBlock + ",term[" + DCtrl.voteRequest().getBlockRange.getStartBlock
+                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]");
+                false
+              }
+            } else {
+              //check who mining.
+              if (cur_dnode.getLastBlockTime > 0 && JodaTimeHelper.secondIntFromNow(cur_dnode.getLastBlockTime)
+                > DConfig.MAX_WAIT_BLK_EPOCH_SEC) {
+                //this block is ban because lost one 
+                log.debug("lost Miner Block:B=" + cur_dnode.getCurBlock + ",past=" + JodaTimeHelper.secondIntFromNow(cur_dnode.getLastBlockTime));
+              }
+              false
             }
           case DNodeState.DN_SYNC_BLOCK =>
             RTask_CoMine.runOnce
@@ -123,7 +160,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
 
       } catch {
         case e: Throwable =>
-          log.debug("raft sate managr :Error", e);
+          log.warn("dpos control :Error", e);
       } finally {
         MDCRemoveMessageID()
       }
@@ -131,7 +168,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
   }
 }
 
-object DCtrl {
+object DCtrl extends LogHelper {
   var instance: DPosNodeController = DPosNodeController(null);
   def dposNet(): Network = instance.network;
   //  val superMinerByUID: Map[String, PDNode] = Map.empty[String, PDNode];
@@ -147,22 +184,72 @@ object DCtrl {
       instance.cur_dnode.getStateValue > DNodeState.DN_INIT_VALUE
   }
 
-  def checkMiner(block: Int, coaddr: String): Boolean = {
+  def checkMiner(block: Int, coaddr: String, mineTime: Long): Boolean = {
     minerByBlockHeight(block) match {
       case Some(n) =>
-        coaddr.equals(n)
+        if (coaddr.equals(n)) {
+          true
+        } else {
+          val vr = voteRequest().getBlockRange;
+          val blkshouldMineSec = (block - vr.getStartBlock) * vr.getEachBlockSec + voteRequest().getTermStartMs / 1000
+          val realblkMineSec = mineTime / 1000;
+          log.debug("mine for Next:" + blkshouldMineSec + ",realblkminesec=" + blkshouldMineSec);
+          if (realblkMineSec > blkshouldMineSec) {
+            minerByBlockHeight(block + 1) match {
+              case Some(n) =>
+                log.debug("mine for Next:check:" + blkshouldMineSec + ",realblkminesec=" + blkshouldMineSec + ",n=" + n
+                  + ",c=" + coaddr + ",blocknext=" + block + 1);
+
+                coaddr.equals(n)
+              case None =>
+                false
+            }
+          }
+
+          false
+        }
+
       case None =>
         false
     }
   }
   def minerByBlockHeight(block: Int): Option[String] = {
     val vr = voteRequest().getBlockRange;
-    if (block >= vr.getStartBlock && block < vr.getEndBlock) {
+    if (block >= vr.getStartBlock && block <= vr.getEndBlock) {
       Some(voteRequest().getMinerQueue(block - vr.getStartBlock)
         .getMinerCoaddr)
     } else {
       None
     }
+  }
+  def saveBlock(b: PBlockEntryOrBuilder): Unit = {
+
+    Daos.dposdb.put("D" + b.getBlockHeight, OValue.newBuilder()
+      .setCount(b.getBlockHeight)
+      .setInfo(b.getSign)
+      .setNonce(b.getSliceId)
+      .setSecondKey(b.getCoinbaseBcuid)
+      .setExtdata(b.getBlockHeader).build())
+    log.debug("saveBlockOK:BLK=" + b.getBlockHeight + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
+      + ",sign=" + b.getSign)
+  }
+
+  def loadFromBlock(block: Int): PBlockEntry.Builder = {
+    val ov = Daos.dposdb.get("D" + block).get
+    if (ov != null) {
+      val b = PBlockEntry.newBuilder().setBlockHeader(ov.getExtdata)
+        .setBlockHeight(ov.getCount.asInstanceOf[Int])
+        .setSign(ov.getInfo)
+        .setSliceId(ov.getNonce)
+        .setCoinbaseBcuid(ov.getSecondKey)
+      log.debug("load block ok =" + b.getBlockHeight + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
+        + ",sign=" + b.getSign)
+      b
+    } else {
+      log.debug("blk not found:" + block);
+      null
+    }
+
   }
 
 }

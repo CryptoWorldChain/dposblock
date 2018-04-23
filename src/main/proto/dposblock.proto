@@ -13,9 +13,11 @@ enum PCommand {
 	
 	DTV = 3; //轮训记账次序
 	
-	SYN = 4; //同步block
+	DTR = 4; //轮训记账投票结果
 	
-	VFY = 5;	 //块校验
+	SYN = 5; //同步block
+	
+	VFY = 6;	 //块校验
 	TTT = 30;//ping,pong,wall ,testing
 };
 
@@ -38,7 +40,9 @@ message PDNode{
 	int64		duty_end_ms	 = 10;//表示当前duty的最后时间
 	string		duty_uid = 11;//记录当前duty的uid
 	int64		last_duty_time = 12;//上次提交的时间
+	int64		last_block_time = 14;//
 	int32		node_count = 20;//当前节点的信息
+	int32		bit_idx = 13;//bitidx;
 }
 
 message PSCoMine{//加入
@@ -84,8 +88,12 @@ message  PSCoinbase{
 	int32 	co_nodes = 6;//how many node to vote.
 	repeated string	d_address = 7;//
 	string	term_sign = 8;
+	string 		bcuid = 10;//节点
+	int64	mine_time = 11;
+	
 	PBlockEntry block_header = 20;
 	string 	message_id = 30;
+	
 }
 
 message  PRetCoinbase{
@@ -100,6 +108,7 @@ message  PRetCoinbase{
 		CR_REJECT = 1;
 	}
 	CoinbaseResult	result = 5;
+	string 		bcuid = 10;//节点
 	
 	string 	message_id = 30;
 }
@@ -130,6 +139,8 @@ message  PSDutyTermVote{
 	string 	last_term_uid = 11;
 	int64	last_term_id  = 12;
 	
+	string 		bcuid = 13;//节点
+	
 	string 	message_id = 30;
 	string 	sign = 50;//
 }
@@ -145,7 +156,7 @@ message  PDutyTermResult{
 	VoteResult	result = 3;
 	int64 	term_id = 4;
 	string 	vote_address = 5;
-	int32	lock_block = 10;//从第几个区块开始锁定
+	string 		bcuid = 10;//节点
 	string 	message_id = 30;
 	string 	sign = 50;//
 }
@@ -164,6 +175,7 @@ message PSSyncBlocks{
 	int32 	start_id = 2;//一般是取0
 	int32	end_id = 3;//分页 
 	repeated int32 block_idx = 4;//byids
+	string 	bcuid = 10;//节点
 	string message_id = 30;
 }
 
@@ -172,6 +184,7 @@ message PRetSyncBlocks{
 	string ret_message = 2;
 	repeated PBlockEntry block_headers = 3;
 	string message_id = 30;
+	string 		bcuid = 10;//节点
 }
 
  

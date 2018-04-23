@@ -31,32 +31,47 @@ object RTask_CoMine extends LogHelper with BitMap {
     var maxBlockHeight: Long = 0;
     MDCSetBCUID(network)
 
-    network.directNodes.filter { n => !DCtrl.coMinerByUID.contains(n.bcuid) }.map { n =>
-      val start = System.currentTimeMillis();
-      network.sendMessage("JINDOB", join, n, new CallBack[FramePacket] {
-        def onSuccess(fp: FramePacket) = {
-          log.debug("send JINDOB success:to " + n.uri + ",body=" + fp.getBody)
-          val end = System.currentTimeMillis();
-          val retjoin = PRetCoMine.newBuilder().mergeFrom(fp.getBody);
-          if (retjoin.getRetCode() == 0) { //same message
-            if (fastNode == null) {
-              fastNode = retjoin.getDn;
-            } else if (retjoin.getDn.getCurBlock >= fastNode.getCurBlock) {
-              if (end - start < minCost) { //set the fast node
-                minCost = end - start
-                fastNode = retjoin.getDn;
+    val cdl = new CountDownLatch(network.directNodes.size)
+    network.directNodes //.filter { n => !DCtrl.coMinerByUID.contains(n.bcuid) }
+      .map { n =>
+        val start = System.currentTimeMillis();
+        network.sendMessage("JINDOB", join, n, new CallBack[FramePacket] {
+          def onSuccess(fp: FramePacket) = {
+            try {
+              val end = System.currentTimeMillis();
+              val retjoin = PRetCoMine.newBuilder().mergeFrom(fp.getBody);
+              MDCSetBCUID(network)
+              log.debug("send JINDOB success:to " + n.uri + ",code=" + retjoin.getRetCode)
+              if (retjoin.getRetCode() == 0) { //same message
+                if (fastNode == null) {
+                  fastNode = retjoin.getDn;
+                } else if (retjoin.getDn.getCurBlock > fastNode.getCurBlock) {
+                  fastNode = retjoin.getDn;
+                  minCost = end - start
+                } else if (retjoin.getDn.getCurBlock == fastNode.getCurBlock) {
+                  if (end - start < minCost) { //set the fast node
+                    minCost = end - start
+                    fastNode = retjoin.getDn;
+                  }
+                }
+                log.debug("get other nodeInfo:B=" + retjoin.getDn.getCurBlock+",state="+retjoin.getCoResult);
+                if (retjoin.getCoResult == DNodeState.DN_CO_MINER) {
+                  DCtrl.coMinerByUID.put(retjoin.getDn.getBcuid, retjoin.getDn);
+                }
               }
+            } finally {
+              cdl.countDown()
             }
-            log.debug("get other nodeInfo:B=" + retjoin.getDn.getCurBlock);
-            DCtrl.coMinerByUID.put(retjoin.getDn.getBcuid, retjoin.getDn);
           }
-        }
-        def onFailed(e: java.lang.Exception, fp: FramePacket) {
-          log.debug("send JINDOB ERROR " + n.uri + ",e=" + e.getMessage, e)
-        }
-      })
-    }
-    log.debug("get nodes:count=" + DCtrl.coMinerByUID.size+",dposnetNodecount="+network.directNodeByBcuid.size);
+          def onFailed(e: java.lang.Exception, fp: FramePacket) {
+            cdl.countDown()
+            log.debug("send JINDOB ERROR " + n.uri + ",e=" + e.getMessage, e)
+          }
+        })
+      }
+    cdl.await();
+    log.debug("get nodes:count=" + DCtrl.coMinerByUID.size + ",dposnetNodecount=" + network.directNodeByBcuid.size
+      + ",maxheight=" + fastNode.getCurBlock);
     //remove off line
     DCtrl.coMinerByUID.filter(p => {
       network.nodeByBcuid(p._1) == network.noneNode
@@ -70,7 +85,8 @@ object RTask_CoMine extends LogHelper with BitMap {
       cn.setState(DNodeState.DN_SYNC_BLOCK)
       BlockSync.trySyncBlock(fastNode.getCurBlock, fastNode.getBcuid);
       fastNode
-    } else if (cn.getCurBlock >= fastNode.getCurBlock) {
+    } else if (cn.getCurBlock >= fastNode.getCurBlock
+      && DCtrl.coMinerByUID.size > 0 && DCtrl.coMinerByUID.size >= network.directNodes.size * 2 / 3) {
       log.debug("ready to become cominer is max:cur=" + cn.getCurBlock + ", net=" + fastNode.getCurBlock);
       cn.setState(DNodeState.DN_CO_MINER)
       cn

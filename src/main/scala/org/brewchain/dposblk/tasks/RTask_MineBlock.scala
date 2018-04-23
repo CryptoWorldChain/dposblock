@@ -22,23 +22,33 @@ import org.brewchain.dposblk.pbgens.Dposblock.PSCoinbase
 
 //获取其他节点的term和logidx，commitidx
 object RTask_MineBlock extends LogHelper with BitMap {
-  def runOnce(implicit network: Network): Unit = {
+  def runOnce(implicit network: Network): Boolean = {
     this.synchronized {
       //    Thread.currentThread().setName("RTask_MineBlock");
       val msgid = UUIDGenerator.generate();
       val cn = DCtrl.instance.cur_dnode;
-      if (DCtrl.checkMiner(cn.getCurBlock + 1, cn.getCoAddress)) {
+      val curtime=System.currentTimeMillis();
+      if (DCtrl.checkMiner(cn.getCurBlock + 1, cn.getCoAddress,curtime)) {
         MDCSetBCUID(network)
         val newblockheight = cn.getCurBlock + 1
+        log.debug("mining check ok :new block=" + newblockheight + ",CO=" + cn.getCoAddress);
+        cn.setLastDutyTime(System.currentTimeMillis());
         cn.setCurBlock(newblockheight)
+        DCtrl.instance.syncToDB()
         val newblock = PSCoinbase.newBuilder()
           .setBlockHeight(newblockheight).setCoAddress(cn.getCoAddress)
           .setTermId(DCtrl.termMiner().getTermId)
           .setCoNodes(DCtrl.coMinerByUID.size)
           .setTermSign(DCtrl.termMiner().getSign)
+          .setCoAddress(cn.getCoAddress)
+          .setMineTime(curtime)
           .setMessageId(msgid)
           .setSliceId(0)
         network.dwallMessage("MINDOB", Left(newblock.build()), msgid)
+        true
+      } else {
+        log.debug("waiting for my mine block:" + (cn.getCurBlock + 1)  + ",CO=" + cn.getCoAddress);
+        false
       }
     }
   }
