@@ -57,7 +57,7 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
         this.synchronized({
           if ((StringUtils.isBlank(cn.getDutyUid) || cn.getDutyUid.equals(pbo.getLastTermUid))
             //&& (StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
-            && (vq.getTermId <= pbo.getLastTermId)
+            && (vq.getTermId <= pbo.getLastTermId) && vq.getTermId < pbo.getTermId 
             || StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) {
             if (cn.getCurBlock < pbo.getBlockRange.getStartBlock - 1) {
               log.debug("Grant DPos Term Vote but Block Height Not Ready:" + cn.getDutyUid + ",T=" + pbo.getTermId

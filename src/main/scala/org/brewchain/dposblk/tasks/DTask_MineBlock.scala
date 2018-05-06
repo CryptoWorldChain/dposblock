@@ -27,8 +27,9 @@ object RTask_MineBlock extends LogHelper with BitMap {
       //    Thread.currentThread().setName("RTask_MineBlock");
       val msgid = UUIDGenerator.generate();
       val cn = DCtrl.instance.cur_dnode;
-      val curtime=System.currentTimeMillis();
-      if (DCtrl.checkMiner(cn.getCurBlock + 1, cn.getCoAddress,curtime)) {
+      val curtime = System.currentTimeMillis();
+      if (DCtrl.checkMiner(cn.getCurBlock + 1, cn.getCoAddress, curtime,
+        DConfig.BLK_EPOCH_SEC * 1000)) {
         MDCSetBCUID(network)
         val newblockheight = cn.getCurBlock + 1
         log.debug("mining check ok :new block=" + newblockheight + ",CO=" + cn.getCoAddress);
@@ -47,8 +48,8 @@ object RTask_MineBlock extends LogHelper with BitMap {
         network.dwallMessage("MINDOB", Left(newblock.build()), msgid)
         true
       } else {
-        log.debug("waiting for my mine block:" + (cn.getCurBlock + 1)  + ",CO=" + cn.getCoAddress
-            +",TU="+DCtrl.termMiner().getLastTermUid);
+        log.debug("waiting for my mine block:" + (cn.getCurBlock + 1) + ",CO=" + cn.getCoAddress
+          + ",TU=" + DCtrl.termMiner().getLastTermUid);
         false
       }
     }

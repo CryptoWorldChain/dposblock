@@ -129,9 +129,9 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
           case DNodeState.DN_DUTY_MINER =>
             if (RTask_MineBlock.runOnce) {
               if (cur_dnode.getCurBlock >= DCtrl.voteRequest().getBlockRange.getEndBlock
-                  ||term_Miner.getTermId<vote_Request.getTermId) {
+                || term_Miner.getTermId < vote_Request.getTermId) {
                 log.debug("cur term WILL end:newblk=" + cur_dnode.getCurBlock + ",term[" + DCtrl.voteRequest().getBlockRange.getStartBlock
-                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]"+",T="+term_Miner.getTermId);
+                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",T=" + term_Miner.getTermId);
                 continue = true;
                 val sleept = Math.abs((Math.random() * DConfig.DTV_TIME_MS_EACH_BLOCK).asInstanceOf[Long]) + 10;
                 log.debug("Duty_Miner To CoMiner:sleep=" + sleept)
@@ -146,7 +146,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
             } else {
               //check who mining.
               if (cur_dnode.getLastBlockTime > 0 && JodaTimeHelper.secondIntFromNow(cur_dnode.getLastBlockTime)
-                > DConfig.MAX_WAIT_BLK_EPOCH_SEC) {
+                > DConfig.MAX_WAIT_BLK_EPOCH_MS / 1000) {
                 //this block is ban because lost one 
                 log.debug("lost Miner Block:B=" + cur_dnode.getCurBlock + ",past=" + JodaTimeHelper.secondIntFromNow(cur_dnode.getLastBlockTime));
               }
@@ -187,32 +187,43 @@ object DCtrl extends LogHelper {
       instance.cur_dnode.getStateValue > DNodeState.DN_INIT_VALUE
   }
 
-  def checkMiner(block: Int, coaddr: String, mineTime: Long): Boolean = {
+  def checkMiner(block: Int, coaddr: String, mineTime: Long, maxWaitMS: Long = 1L): Boolean = {
+    val vr = voteRequest().getBlockRange;
+    val blkshouldMineMS = (block - vr.getStartBlock + 1) * vr.getEachBlockSec * 1000 + voteRequest().getTermStartMs
+    val realblkMineMS = mineTime;
     minerByBlockHeight(block) match {
       case Some(n) =>
         if (coaddr.equals(n)) {
+          if (realblkMineMS < blkshouldMineMS) {
+            log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec);
+            Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
+          }
           true
         } else {
-          val vr = voteRequest().getBlockRange;
-          val blkshouldMineSec = (block - vr.getStartBlock) * vr.getEachBlockSec + voteRequest().getTermStartMs / 1000
-          val realblkMineSec = mineTime / 1000;
-          log.debug("mine for Next:" + blkshouldMineSec + ",realblkminesec=" + blkshouldMineSec);
-          if (realblkMineSec > blkshouldMineSec) {
+          if (realblkMineMS > blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) {
             minerByBlockHeight(block + 1) match {
               case Some(n) =>
-                log.debug("mine for Next:check:" + blkshouldMineSec + ",realblkminesec=" + blkshouldMineSec + ",n=" + n
-                  + ",c=" + coaddr + ",blocknext=" + block + 1);
-
+                log.debug("Override miner for Next:check:" + blkshouldMineMS + ",realblkmine=" + realblkMineMS + ",n=" + n
+                  + ",coaddr=" + coaddr + ",c=" + coaddr + ",blocknext=" + block + 1);
                 coaddr.equals(n)
               case None =>
+                log.debug("wait for Miner:Should=" + blkshouldMineMS + ",Real=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec);
                 false
             }
+          } else {
+            log.debug("wait for timeout to Mine:ShouldT=" + (blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) + ",realblkmine=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec);
+            if (realblkMineMS < blkshouldMineMS) {
+              Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
+            }
+            false
           }
 
-          false
         }
-
       case None =>
+        if (maxWaitMS >= 1 && realblkMineMS < blkshouldMineMS) {
+          log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec);
+          Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
+        }
         false
     }
   }

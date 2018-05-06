@@ -82,8 +82,8 @@ object RTask_DutyTermVote extends LogHelper {
             log.debug("cannot decide vote state, wait other response")
           }
           false
-        case a@_ =>
-          log.debug("not converge,try next time:::"+a)
+        case a @ _ =>
+          log.debug("not converge,try next time:::" + a)
           //            RSM.resetVoteRequest();
           false
       }
@@ -114,7 +114,7 @@ object RTask_DutyTermVote extends LogHelper {
       val msgid = UUIDGenerator.generate();
       MDCSetMessageID(msgid);
 
-      log.debug("try vote new term:");
+      //      log.debug("try vote new term:");
       DCtrl.coMinerByUID.filter(p => {
         network.nodeByBcuid(p._1) == network.noneNode
       }).map { p =>
@@ -128,13 +128,13 @@ object RTask_DutyTermVote extends LogHelper {
       val startBlk = cn.getCurBlock + 1;
       newterm.setBlockRange(BlockRange.newBuilder()
         .setStartBlock(startBlk)
-        .setEndBlock(startBlk + mineBlockCount - 1))
+        .setEndBlock(startBlk + mineBlockCount - 1)
+        .setEachBlockSec(DConfig.BLK_EPOCH_SEC))
         .setCoNodes(conodescount)
         .setMessageId(msgid)
         .setCoAddress(DCtrl.instance.cur_dnode.getCoAddress)
         .setCwsGuaranty(1)
         .setSliceId(1)
-        .setBcuid(network.root().bcuid)
         .setTermStartMs(System.currentTimeMillis());
       newterm.setTermEndMs(DConfig.DTV_TIME_MS_EACH_BLOCK * mineBlockCount);
 

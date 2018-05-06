@@ -7,8 +7,8 @@ object DConfig {
   val prop: PropHelper = new PropHelper(null);
   val PROP_DOMAIN = "org.bc.dpos."
 
-  val BLK_EPOCH_SEC = prop.get(PROP_DOMAIN + "blk.epoch.sec", 10); //2 seconds each block 
-  val MAX_WAIT_BLK_EPOCH_SEC = prop.get(PROP_DOMAIN + "max.wait.blk.epoch.sec", 60); //1 min to wait for next block mine 
+  val BLK_EPOCH_SEC = prop.get(PROP_DOMAIN + "blk.epoch.sec", 1); //2 seconds each block 
+  val MAX_WAIT_BLK_EPOCH_MS = prop.get(PROP_DOMAIN + "max.wait.blk.epoch.ms", 10*1000); //1 min to wait for next block mine 
 
   val SYNCBLK_PAGE_SIZE = prop.get(PROP_DOMAIN + "syncblk.page.size", 10);
 
@@ -30,7 +30,7 @@ object DConfig {
 
   val DTV_TIMEOUT_SEC = prop.get(PROP_DOMAIN + "dtv.timeout.sec", -10);
   
-  val DTV_MUL_BLOCKS_EACH_TERM = prop.get(PROP_DOMAIN + "dtv.mul.blocks.each.term", 2);
+  val DTV_MUL_BLOCKS_EACH_TERM = prop.get(PROP_DOMAIN + "dtv.mul.blocks.each.term", 12);
   val DTV_MAX_SUPER_MINER = prop.get(PROP_DOMAIN + "dtv.max.super.miner", 31);
   val DTV_MIN_SUPER_MINER = prop.get(PROP_DOMAIN + "dtv.min.super.miner", 5);
   val DTV_TIME_MS_EACH_BLOCK = prop.get(PROP_DOMAIN + "dtv.time.ms.each_block", 1000);
