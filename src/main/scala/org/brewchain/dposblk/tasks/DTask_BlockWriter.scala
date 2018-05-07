@@ -20,7 +20,7 @@ import org.brewchain.dposblk.pbgens.Dposblock.PRetSyncBlocks
 import org.brewchain.dposblk.Daos
 
 //获取其他节点的term和logidx，commitidx
-case class RTask_BlockWriter(pbo: PRetSyncBlocks,
+case class DTask_BlockWriter(pbo: PRetSyncBlocks,
     runCounter: AtomicLong, wall: Boolean = false) extends SRunner with LogHelper {
   def getName(): String = "LogW:"
 
@@ -58,7 +58,7 @@ object LogWriter extends LogHelper {
   def writeLog(pbo: PRetSyncBlocks, wall: Boolean): Unit = {
     log.debug("write Log:CC=" + pbo.getBlockHeadersCount)
     if (pbo.getBlockHeadersCount > 0) {
-      val lr = RTask_BlockWriter(pbo, runCounter, wall)
+      val lr = DTask_BlockWriter(pbo, runCounter, wall)
       Scheduler.runOnce(lr)
     }
     //sync

@@ -12,15 +12,14 @@ trait SRunner extends Runnable with OLog with PMNodeHelper {
   def run() = {
     val oldname = Thread.currentThread().getName;
     Thread.currentThread().setName(getName());
-          log.debug(getName() + ": ----------- [START]")
-
+//          log.debug(getName() + ": ----------- [START]")
     try {
       runOnce()
     } catch {
       case e: Throwable =>
-        log.debug(getName() + ":  ----------- Error", e);
+//        log.debug(getName() + ":  ----------- Error", e);
     } finally {
-      log.debug(getName() + ":  ----------- [END]")
+//      log.debug(getName() + ":  ----------- [END]")
       Thread.currentThread().setName(oldname + "");
     }
   }

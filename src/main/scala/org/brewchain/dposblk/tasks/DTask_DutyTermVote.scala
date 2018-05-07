@@ -19,7 +19,7 @@ import org.brewchain.dposblk.pbgens.Dposblock.PSDutyTermVote.TermBlock
 import org.apache.commons.lang3.StringUtils
 
 //获取其他节点的term和logidx，commitidx
-object RTask_DutyTermVote extends LogHelper {
+object DTask_DutyTermVote extends LogHelper {
   def checkVoteDB(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
     val records = Daos.dposdb.listBySecondKey("D" + vq.getTermId + "-" + vq.getSign)
     log.debug("check db status:B[=" + vq.getBlockRange.getStartBlock + ","

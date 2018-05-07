@@ -17,7 +17,7 @@ import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntry
 import org.brewchain.dposblk.Daos
 
 //获取其他节点的term和logidx，commitidx
-case class RTask_SyncBlock(startIdx: Int, endIdx: Int,
+case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
     network: Network, fastNodeID: String,
     runCounter: AtomicLong) extends SRunner with LogHelper {
   def getName(): String = "SyncBlock:" + startIdx + "-" + (endIdx)
@@ -37,7 +37,7 @@ case class RTask_SyncBlock(startIdx: Int, endIdx: Int,
       network.sendMessage("SYNDOB", sync, n, new CallBack[FramePacket] {
         def onSuccess(fp: FramePacket) = {
           val end = System.currentTimeMillis();
-          log.debug("send SYNDOB success:to " + n.uri + ",cost=" + (end - start))
+          log.debug("send SYNDOB success:to " + fastNodeID + ",cost=" + (end - start))
           val ret = PRetSyncBlocks.newBuilder().mergeFrom(fp.getBody);
           if (ret.getRetCode() == 0) { //same message
 

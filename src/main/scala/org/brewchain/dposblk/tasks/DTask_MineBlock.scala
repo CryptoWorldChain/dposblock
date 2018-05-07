@@ -21,7 +21,7 @@ import org.brewchain.dposblk.pbgens.Dposblock.DNodeState
 import org.brewchain.dposblk.pbgens.Dposblock.PSCoinbase
 
 //获取其他节点的term和logidx，commitidx
-object RTask_MineBlock extends LogHelper with BitMap {
+object DTask_MineBlock extends LogHelper with BitMap {
   def runOnce(implicit network: Network): Boolean = {
     this.synchronized {
       //    Thread.currentThread().setName("RTask_MineBlock");

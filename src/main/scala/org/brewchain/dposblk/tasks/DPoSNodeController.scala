@@ -110,7 +110,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
           case DNodeState.DN_INIT =>
             //tell other I will join
             loadNodeFromDB();
-            continue = RTask_CoMine.runOnce match {
+            continue = DTask_CoMine.runOnce match {
               case n: PDNode if n == cur_dnode =>
                 log.debug("dpos cominer init ok:" + n);
                 true;
@@ -122,12 +122,12 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
                 false
             }
           case DNodeState.DN_CO_MINER =>
-            if (RTask_DutyTermVote.runOnce) {
+            if (DTask_DutyTermVote.runOnce) {
               continue = true;
               cur_dnode.setState(DNodeState.DN_DUTY_MINER);
             }
           case DNodeState.DN_DUTY_MINER =>
-            if (RTask_MineBlock.runOnce) {
+            if (DTask_MineBlock.runOnce) {
               if (cur_dnode.getCurBlock >= DCtrl.voteRequest().getBlockRange.getEndBlock
                 || term_Miner.getTermId < vote_Request.getTermId) {
                 log.debug("cur term WILL end:newblk=" + cur_dnode.getCurBlock + ",term[" + DCtrl.voteRequest().getBlockRange.getStartBlock
@@ -150,12 +150,21 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
                 //this block is ban because lost one 
                 log.debug("lost Miner Block:B=" + cur_dnode.getCurBlock + ",past=" + JodaTimeHelper.secondIntFromNow(cur_dnode.getLastBlockTime));
               }
-              false
+              if (cur_dnode.getCurBlock >= DCtrl.voteRequest().getBlockRange.getEndBlock) {
+                continue = true;
+                val sleept = Math.abs((Math.random() * DConfig.DTV_TIME_MS_EACH_BLOCK).asInstanceOf[Long]) + 10;
+                log.debug("Duty_Miner To CoMiner:sleep=" + sleept)
+                cur_dnode.setState(DNodeState.DN_CO_MINER);
+                Thread.sleep(sleept);
+                true
+              } else {
+                false
+              }
             }
           case DNodeState.DN_SYNC_BLOCK =>
-            RTask_CoMine.runOnce
+            DTask_CoMine.runOnce
           case DNodeState.DN_BAKCUP =>
-            RTask_CoMine.runOnce
+            DTask_CoMine.runOnce
           case _ =>
             log.warn("unknow State:" + cur_dnode.getState);
 
@@ -191,11 +200,12 @@ object DCtrl extends LogHelper {
     val vr = voteRequest().getBlockRange;
     val blkshouldMineMS = (block - vr.getStartBlock + 1) * vr.getEachBlockSec * 1000 + voteRequest().getTermStartMs
     val realblkMineMS = mineTime;
+    val termblockLeft = block - vr.getEndBlock
     minerByBlockHeight(block) match {
       case Some(n) =>
         if (coaddr.equals(n)) {
           if (realblkMineMS < blkshouldMineMS) {
-            log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec);
+            log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec + ",TermLeft=" + termblockLeft);
             Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
           }
           true
@@ -204,14 +214,15 @@ object DCtrl extends LogHelper {
             minerByBlockHeight(block + 1) match {
               case Some(n) =>
                 log.debug("Override miner for Next:check:" + blkshouldMineMS + ",realblkmine=" + realblkMineMS + ",n=" + n
-                  + ",coaddr=" + coaddr + ",c=" + coaddr + ",blocknext=" + block + 1);
+                  + ",coaddr=" + coaddr + ",c=" + coaddr + ",blocknext=" + (block + 1) + ",TermLeft=" + termblockLeft);
                 coaddr.equals(n)
               case None =>
-                log.debug("wait for Miner:Should=" + blkshouldMineMS + ",Real=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec);
+                log.debug("wait for Miner:Should=" + blkshouldMineMS + ",Real=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec + ",TermLeft=" + termblockLeft);
                 false
             }
           } else {
-            log.debug("wait for timeout to Mine:ShouldT=" + (blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) + ",realblkmine=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec);
+            log.debug("wait for timeout to Mine:ShouldT=" + (blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) + ",realblkmine=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec
+              + ",TermLeft=" + termblockLeft);
             if (realblkMineMS < blkshouldMineMS) {
               Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
             }
@@ -221,7 +232,7 @@ object DCtrl extends LogHelper {
         }
       case None =>
         if (maxWaitMS >= 1 && realblkMineMS < blkshouldMineMS) {
-          log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec);
+          log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec + ",TermLeft=" + termblockLeft);
           Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
         }
         false

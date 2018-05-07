@@ -33,7 +33,7 @@ object DConfig {
   val DTV_MUL_BLOCKS_EACH_TERM = prop.get(PROP_DOMAIN + "dtv.mul.blocks.each.term", 12);
   val DTV_MAX_SUPER_MINER = prop.get(PROP_DOMAIN + "dtv.max.super.miner", 31);
   val DTV_MIN_SUPER_MINER = prop.get(PROP_DOMAIN + "dtv.min.super.miner", 5);
-  val DTV_TIME_MS_EACH_BLOCK = prop.get(PROP_DOMAIN + "dtv.time.ms.each_block", 1000);
+  val DTV_TIME_MS_EACH_BLOCK = prop.get(PROP_DOMAIN + "dtv.time.ms.each_block", 100);
   
   val TICK_DCTRL_SEC = prop.get(PROP_DOMAIN + "tick.dctrl.sec", 1);
   val INITDELAY_DCTRL_SEC = prop.get(PROP_DOMAIN + "initdelay.dctrl.sec", 1);

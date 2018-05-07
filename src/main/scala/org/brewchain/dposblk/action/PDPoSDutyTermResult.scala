@@ -28,7 +28,6 @@ import org.brewchain.dposblk.Daos
 import org.brewchain.bcapi.gens.Oentity.OValue
 import org.brewchain.bcapi.gens.Oentity.OKey
 import com.google.protobuf.ByteString
-import org.brewchain.dposblk.tasks.RTask_DutyTermVote
 
 @NActorProvider
 @Instantiate

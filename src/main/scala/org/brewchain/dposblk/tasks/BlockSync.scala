@@ -35,7 +35,7 @@ object BlockSync extends LogHelper {
     //        val cdlcount = Math.min(RConfig.SYNCLOG_MAX_RUNNER, pagecount)
     var cc = cn.getCurBlock + 1;
     while (cc <= block_max_wanted) {
-      val runner = RTask_SyncBlock(startIdx = cc, endIdx = 
+      val runner = DTask_SyncBlock(startIdx = cc, endIdx = 
         Math.min(cc + DConfig.SYNCBLK_PAGE_SIZE - 1, block_max_wanted),
         network = network, fastNodeID, runCounter)
       cc += DConfig.SYNCBLK_PAGE_SIZE
