@@ -76,7 +76,13 @@ object DTask_DutyTermVote extends LogHelper {
             val ban_sec = (Math.abs(Math.random() * 100000 % (DConfig.BAN_MAXSEC_FOR_VOTE_REJECT - DConfig.BAN_MINSEC_FOR_VOTE_REJECT)) +
               DConfig.BAN_MINSEC_FOR_VOTE_REJECT).asInstanceOf[Long]
             log.debug("Undecisible but not converge.ban sleep=" + ban_sec)
+            if (System.currentTimeMillis() - vq.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
+              log.debug("remove undecisible vote for timeout:"+(System.currentTimeMillis() - vq.getTermStartMs));
+              Daos.dposdb.batchDelete(records.get.map { p => p.getKey }.toArray)
+              vq.clear();
+            }
             Thread.sleep(ban_sec * 1000)
+
             //          !!    RSM.resetVoteRequest();
           } else {
             log.debug("cannot decide vote state, wait other response")

@@ -42,5 +42,7 @@ object DConfig {
 
   val BAN_MINSEC_FOR_VOTE_REJECT = prop.get(PROP_DOMAIN + "ban.minsec.for.vote.reject", 10);
   val BAN_MAXSEC_FOR_VOTE_REJECT = prop.get(PROP_DOMAIN + "ban.maxsec.for.vote.reject", 60);
+  
+  val MAX_TIMEOUTSEC_FOR_REVOTE = prop.get(PROP_DOMAIN + "max.timeoutsec.for.revote", 30);
 
 }

@@ -211,7 +211,7 @@ object DCtrl extends LogHelper {
           true
         } else {
           if (realblkMineMS > blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) {
-            minerByBlockHeight(block + 1) match {
+            minerByBlockHeight(block + ((realblkMineMS - blkshouldMineMS) / DConfig.MAX_WAIT_BLK_EPOCH_MS).asInstanceOf[Int]) match {
               case Some(n) =>
                 log.debug("Override miner for Next:check:" + blkshouldMineMS + ",realblkmine=" + realblkMineMS + ",n=" + n
                   + ",coaddr=" + coaddr + ",c=" + coaddr + ",blocknext=" + (block + 1) + ",TermLeft=" + termblockLeft);
@@ -242,6 +242,10 @@ object DCtrl extends LogHelper {
     val vr = voteRequest().getBlockRange;
     if (block >= vr.getStartBlock && block <= vr.getEndBlock) {
       Some(voteRequest().getMinerQueue(block - vr.getStartBlock)
+        .getMinerCoaddr)
+    } else if (voteRequest().getMinerQueueCount > 0) {
+      Some(voteRequest().getMinerQueue(Math.abs(block - vr.getStartBlock)
+        % voteRequest().getMinerQueueCount)
         .getMinerCoaddr)
     } else {
       None
