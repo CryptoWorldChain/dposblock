@@ -21,6 +21,7 @@ import org.brewchain.dposblk.pbgens.Dposblock.DNodeState
 import org.brewchain.dposblk.pbgens.Dposblock.PSCoinbase
 import org.brewchain.dposblk.Daos
 import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntry
+import org.brewchain.account.util.ByteUtil
 
 //获取其他节点的term和logidx，commitidx
 object DTask_MineBlock extends LogHelper with BitMap {
@@ -34,11 +35,11 @@ object DTask_MineBlock extends LogHelper with BitMap {
         DConfig.BLK_EPOCH_SEC * 1000)) {
         MDCSetBCUID(network)
         val newblockheight = cn.getCurBlock + 1
-        log.debug("mining check ok :new block=" + newblockheight + ",CO=" + cn.getCoAddress);
-        cn.setLastDutyTime(System.currentTimeMillis());
-        cn.setCurBlock(newblockheight)
-        DCtrl.instance.syncToDB()
-        val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock,null,null);
+        log.debug("mining check ok :new block=" + newblockheight + ",CO=" + cn.getCoAddress
+          + ",MaxTnx=" + DCtrl.termMiner().getMaxTnxEachBlock);
+        val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock, 
+            ByteUtil.EMPTY_BYTE_ARRAY
+            , ByteUtil.EMPTY_BYTE_ARRAY);
         val newCoinbase = PSCoinbase.newBuilder()
           .setBlockHeight(newblockheight).setCoAddress(cn.getCoAddress)
           .setTermId(DCtrl.termMiner().getTermId)
@@ -48,11 +49,17 @@ object DTask_MineBlock extends LogHelper with BitMap {
           .setMineTime(curtime)
           .setMessageId(msgid)
           .setBlockHeader(PBlockEntry.newBuilder().setBlockHeight(newblockheight)
-              .setCoinbaseBcuid(DCtrl.termMiner().getBcuid).setSliceId(DCtrl.termMiner().getSliceId)
-              .setBlockHeader(newblk.build().toByteString())
-              .setSign("TOLIUBODOSIGN"))
+            .setCoinbaseBcuid(cn.getCoAddress).setSliceId(DCtrl.termMiner().getSliceId)
+            .setBlockHeader(newblk.build().toByteString())
+            .setSign("TOLIUBODOSIGN"))
           .setSliceId(0)
+
+        cn.setLastDutyTime(System.currentTimeMillis());
+        cn.setCurBlock(newblockheight)
+        DCtrl.instance.syncToDB()
+
         network.dwallMessage("MINDOB", Left(newCoinbase.build()), msgid)
+
         true
       } else {
         log.debug("waiting for my mine block:" + (cn.getCurBlock + 1) + ",CO=" + cn.getCoAddress

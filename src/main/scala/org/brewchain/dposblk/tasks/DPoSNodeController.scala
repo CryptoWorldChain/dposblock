@@ -259,9 +259,10 @@ object DCtrl extends LogHelper {
     }
   }
   def saveBlock(b: PBlockEntryOrBuilder): Unit = {
-
-    
-    Daos.blkHelper.ApplyBlock(b.getBlockHeader);
+    if (!StringUtils.equals(b.getCoinbaseBcuid, curDN().getBcuid)) {
+      log.debug("save Block to AccountModule,H="+b.getBlockHeight+":from=" + b.getCoinbaseBcuid);
+      Daos.blkHelper.ApplyBlock(b.getBlockHeader);
+    }
     Daos.dposdb.put("D" + b.getBlockHeight, OValue.newBuilder()
       .setCount(b.getBlockHeight)
       .setInfo(b.getSign)
