@@ -90,7 +90,6 @@ message  PSCoinbase{
 	string	term_sign = 8;
 	string 		bcuid = 10;//节点
 	int64	mine_time = 11;
-	
 	PBlockEntry block_header = 20;
 	string 	message_id = 30;
 	
@@ -140,7 +139,7 @@ message  PSDutyTermVote{
 	int64	last_term_id  = 12;
 	
 	string 		bcuid = 13;//节点
-	
+	int32	max_tnx_each_block = 14;//
 	string 	message_id = 30;
 	string 	sign = 50;//
 }

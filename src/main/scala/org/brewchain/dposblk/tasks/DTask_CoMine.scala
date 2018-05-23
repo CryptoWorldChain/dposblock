@@ -30,7 +30,7 @@ object DTask_CoMine extends LogHelper with BitMap {
     var minCost: Long = Long.MaxValue;
     var maxBlockHeight: Long = 0;
     MDCSetBCUID(network)
-
+    
     val cdl = new CountDownLatch(network.directNodes.size)
     network.directNodes //.filter { n => !DCtrl.coMinerByUID.contains(n.bcuid) }
       .map { n =>

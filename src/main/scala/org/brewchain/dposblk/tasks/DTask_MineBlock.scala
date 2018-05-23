@@ -19,6 +19,8 @@ import org.brewchain.dposblk.pbgens.Dposblock.PRetCoMine
 import org.brewchain.dposblk.utils.DConfig
 import org.brewchain.dposblk.pbgens.Dposblock.DNodeState
 import org.brewchain.dposblk.pbgens.Dposblock.PSCoinbase
+import org.brewchain.dposblk.Daos
+import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntry
 
 //获取其他节点的term和logidx，commitidx
 object DTask_MineBlock extends LogHelper with BitMap {
@@ -36,7 +38,8 @@ object DTask_MineBlock extends LogHelper with BitMap {
         cn.setLastDutyTime(System.currentTimeMillis());
         cn.setCurBlock(newblockheight)
         DCtrl.instance.syncToDB()
-        val newblock = PSCoinbase.newBuilder()
+        val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock,null,null);
+        val newCoinbase = PSCoinbase.newBuilder()
           .setBlockHeight(newblockheight).setCoAddress(cn.getCoAddress)
           .setTermId(DCtrl.termMiner().getTermId)
           .setCoNodes(DCtrl.coMinerByUID.size)
@@ -44,8 +47,12 @@ object DTask_MineBlock extends LogHelper with BitMap {
           .setCoAddress(cn.getCoAddress)
           .setMineTime(curtime)
           .setMessageId(msgid)
+          .setBlockHeader(PBlockEntry.newBuilder().setBlockHeight(newblockheight)
+              .setCoinbaseBcuid(DCtrl.termMiner().getBcuid).setSliceId(DCtrl.termMiner().getSliceId)
+              .setBlockHeader(newblk.build().toByteString())
+              .setSign("TOLIUBODOSIGN"))
           .setSliceId(0)
-        network.dwallMessage("MINDOB", Left(newblock.build()), msgid)
+        network.dwallMessage("MINDOB", Left(newCoinbase.build()), msgid)
         true
       } else {
         log.debug("waiting for my mine block:" + (cn.getCurBlock + 1) + ",CO=" + cn.getCoAddress

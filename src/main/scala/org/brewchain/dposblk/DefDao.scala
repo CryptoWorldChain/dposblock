@@ -16,22 +16,24 @@ import org.apache.felix.ipojo.annotations.Provides
 import onight.tfw.ojpa.api.DomainDaoSupport
 import onight.tfw.ntrans.api.annotation.ActorRequire
 import org.fc.brewchain.p22p.core.PZPCtrl
+import org.brewchain.account.core.BlockChainHelper
+import org.brewchain.account.core.BlockHelper
 
 abstract class PSMDPoSNet[T <: Message] extends SessionModules[T] with PBUtils with OLog {
   override def getModule: String = PModule.DOB.name()
 }
 
 @NActorProvider
-@Provides(specifications = Array(classOf[ActorService],classOf[IJPAClient]))
+@Provides(specifications = Array(classOf[ActorService], classOf[IJPAClient]))
 class Daos extends PSMDPoSNet[Message] with ActorService {
 
   @StoreDAO(target = "bc_bdb", daoClass = classOf[ODSDPoSDao])
   @BeanProperty
   var dposdb: ODBSupport = null
 
-  @StoreDAO(target = "bc_bdb", daoClass = classOf[ODSBlkDao])
-  @BeanProperty
-  var blkdb: ODBSupport = null
+  //  @StoreDAO(target = "bc_bdb", daoClass = classOf[ODSBlkDao])
+  //  @BeanProperty
+  //  var blkdb: ODBSupport = null
 
   def setDposdb(daodb: DomainDaoSupport) {
     if (daodb != null && daodb.isInstanceOf[ODBSupport]) {
@@ -42,18 +44,23 @@ class Daos extends PSMDPoSNet[Message] with ActorService {
     }
   }
 
-  def setBlkdb(daodb: DomainDaoSupport) {
-    if (daodb != null && daodb.isInstanceOf[ODBSupport]) {
-      blkdb = daodb.asInstanceOf[ODBSupport];
-      Daos.blkdb = blkdb;
-    } else {
-      log.warn("cannot set blkdb ODBSupport from:" + daodb);
-    }
-  }
-
+  //  def setBlkdb(daodb: DomainDaoSupport) {
+  //    if (daodb != null && daodb.isInstanceOf[ODBSupport]) {
+  //      blkdb = daodb.asInstanceOf[ODBSupport];
+  //      Daos.blkdb = blkdb;
+  //    } else {
+  //      log.warn("cannot set blkdb ODBSupport from:" + daodb);
+  //    }
+  //  }
 
   @ActorRequire(scope = "global", name = "pzpctrl")
   var pzp: PZPCtrl = null;
+
+  @ActorRequire(name = "BlockChain_Helper", scope = "global")
+  var bcHelper: BlockChainHelper = null;
+
+  @ActorRequire(name = "Block_Helper", scope = "global")
+  var blkHelper: BlockHelper = null;
 
   def setPzp(_pzp: PZPCtrl) = {
     pzp = _pzp;
@@ -62,18 +69,33 @@ class Daos extends PSMDPoSNet[Message] with ActorService {
   def getPzp(): PZPCtrl = {
     pzp
   }
+  def setBcHelper(_bcHelper: BlockChainHelper) = {
+    bcHelper = _bcHelper;
+    Daos.actdb = bcHelper;
+  }
+  def getBcHelper: BlockChainHelper = {
+    bcHelper
+  }
 
+  def setBlkHelper(_blkHelper: BlockHelper) = {
+    blkHelper = _blkHelper;
+    Daos.blkHelper = _blkHelper;
+  }
+  def getBlkHelper: BlockHelper = {
+    blkHelper
+  }
 }
 
 object Daos extends OLog {
   var dposdb: ODBSupport = null
-  var blkdb: ODBSupport = null
+  //  var blkdb: ODBSupport = null
   var pzp: PZPCtrl = null;
-  
+  var actdb: BlockChainHelper = null;
+  var blkHelper: BlockHelper = null;
   def isDbReady(): Boolean = {
-    return dposdb != null && dposdb.getDaosupport.isInstanceOf[ODBSupport] &&
-      blkdb != null && blkdb.getDaosupport.isInstanceOf[ODBSupport] &&
-      pzp != null;
+    dposdb != null && dposdb.getDaosupport.isInstanceOf[ODBSupport] &&
+      blkHelper != null &&
+      pzp != null && actdb != null;
   }
 }
 

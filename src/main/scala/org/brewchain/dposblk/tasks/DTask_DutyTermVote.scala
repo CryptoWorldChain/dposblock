@@ -139,9 +139,11 @@ object DTask_DutyTermVote extends LogHelper {
         .setCoNodes(conodescount)
         .setMessageId(msgid)
         .setCoAddress(DCtrl.instance.cur_dnode.getCoAddress)
-        .setCwsGuaranty(1)
+        .setCwsGuaranty(DConfig.MAX_CWS_GUARANTY)
         .setSliceId(1)
+        .setMaxTnxEachBlock(DConfig.MAX_TNX_EACH_BLOCK)
         .setTermStartMs(System.currentTimeMillis());
+      
       newterm.setTermEndMs(DConfig.DTV_TIME_MS_EACH_BLOCK * mineBlockCount);
 
       newterm.setTermId(tm.getTermId + 1)

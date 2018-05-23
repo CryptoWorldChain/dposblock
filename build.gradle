@@ -26,6 +26,8 @@ dependencies {
 	compile ("org.brewchain:org.brewchain.p22p:3.0.0")
 	compile ("org.brewchain:org.brewchain.raftnet:3.0.0")
 	
+	compile ("org.brewchain:org.brewchain.account:1.0.5")
+	
 }
 
 jar {

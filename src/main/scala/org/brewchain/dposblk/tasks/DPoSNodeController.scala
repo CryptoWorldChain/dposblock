@@ -63,6 +63,13 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
       }
     }
 
+    if (cur_dnode.getCurBlock != Daos.actdb.getLastBlockNumber) {
+      log.warn("dpos block height Info not Equal to AccountDB:c=" +
+        cur_dnode.getCurBlock + " ==> a=" + Daos.actdb.getLastBlockNumber);
+      cur_dnode.setCurBlock(Daos.actdb.getLastBlockNumber)
+      syncToDB()
+    }
+
     val termov = Daos.dposdb.get(DPOS_NODE_DB_TERM).get
     if (termov == null) {
       Daos.dposdb.put(DPOS_NODE_DB_TERM,
@@ -253,6 +260,8 @@ object DCtrl extends LogHelper {
   }
   def saveBlock(b: PBlockEntryOrBuilder): Unit = {
 
+    
+    Daos.blkHelper.ApplyBlock(b.getBlockHeader);
     Daos.dposdb.put("D" + b.getBlockHeight, OValue.newBuilder()
       .setCount(b.getBlockHeight)
       .setInfo(b.getSign)
