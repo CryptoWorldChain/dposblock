@@ -24,6 +24,7 @@ import org.brewchain.dposblk.pbgens.Dposblock.PRetCoinbase.CoinbaseResult
 import org.fc.brewchain.bcapi.exception.FBSException
 import org.apache.commons.lang3.StringUtils
 import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntry
+import org.brewchain.dposblk.tasks.BlockSync
 
 @NActorProvider
 @Instantiate
@@ -56,13 +57,22 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
               log.debug("Miner is OK:B=" + pbo.getBlockHeight + ",CoAddr=" + pbo.getCoAddress
                 + ",T=" + pbo.getTermId + ",CT=" + DCtrl.termMiner().getTermId + ",TU=" + DCtrl.termMiner().getSign
                 + ",CB=" + cn.getCurBlock);
-              ret.setResult(CoinbaseResult.CR_PROVEN)
               //            if (pbo.getBlockHeight != cn.getCurBlock) {
-              DCtrl.saveBlock(pbo.getBlockEntry)
-              if (pbo.getBlockHeight > cn.getCurBlock) {
-                cn.setCurBlock(pbo.getBlockHeight)
-                DCtrl.instance.syncToDB();
+              DCtrl.saveBlock(pbo.getBlockEntry) match {
+                case n if n > 0 && n < pbo.getBlockHeight =>
+                  ret.setResult(CoinbaseResult.CR_PROVEN)
+                  log.debug("get mining block. larger than local db");
+                  BlockSync.tryBackgroundSyncLogs(pbo.getBlockHeight, pbo.getBcuid)(DCtrl.dposNet())
+                case n if n > 0 =>
+                  ret.setResult(CoinbaseResult.CR_PROVEN)
+                case _ =>
+                  ret.setResult(CoinbaseResult.CR_REJECT)
               }
+
+              //              if (pbo.getBlockHeight > cn.getCurBlock) {
+              //cn.setCurBlock(pbo.getBlockHeight)
+              //DCtrl.instance.syncToDB();
+              //              }
 
               //            }
             } else {

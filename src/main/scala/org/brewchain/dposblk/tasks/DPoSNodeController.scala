@@ -260,21 +260,30 @@ object DCtrl extends LogHelper {
       None
     }
   }
-  def saveBlock(b: PBlockEntryOrBuilder): Unit = {
-//    if (!StringUtils.equals(b.getCoinbaseBcuid, curDN().getBcuid)) {
-      log.debug("save Block to AccountModule,H=" + b.getBlockHeight + ":from=" + b.getCoinbaseBcuid);
-//      log.debug("TRACE::BLH=["+Base64.encodeBase64String(b.getBlockHeader.toByteArray())+"]");
-      Daos.blkHelper.ApplyBlock(b.getBlockHeader);
-//    }
-    Daos.dposdb.put("D" + b.getBlockHeight, OValue.newBuilder()
-      .setCount(b.getBlockHeight)
-      .setInfo(b.getSign)
-      .setNonce(b.getSliceId)
-      .setSecondKey(b.getCoinbaseBcuid)
-      //      .setExtdata(b.getBlockHeader)
-      .build())
-    log.debug("saveBlockOK:BLK=" + b.getBlockHeight + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
-      + ",sign=" + b.getSign)
+  def saveBlock(b: PBlockEntryOrBuilder): Int = {
+    //    if (!StringUtils.equals(b.getCoinbaseBcuid, curDN().getBcuid)) {
+    log.debug("save Block to AccountModule,H=" + b.getBlockHeight + ":from=" + b.getCoinbaseBcuid);
+    //      log.debug("TRACE::BLH=["+Base64.encodeBase64String(b.getBlockHeader.toByteArray())+"]");
+
+    val res = Daos.blkHelper.ApplyBlock(b.getBlockHeader);
+
+    if (res.getCurrentNumber > 0) {
+      //    }
+      Daos.dposdb.put("D" + b.getBlockHeight, OValue.newBuilder()
+        .setCount(b.getBlockHeight)
+        .setInfo(b.getSign)
+        .setNonce(b.getSliceId)
+        .setSecondKey(b.getCoinbaseBcuid)
+        //      .setExtdata(b.getBlockHeader)
+        .build())
+      log.debug("saveBlockOK:BLK=" + b.getBlockHeight + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
+        + ",sign=" + b.getSign)
+      res.getCurrentNumber
+    } else {
+      log.debug("cannot save Block:Height Not Equals=" + b.getBlockHeight + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
+        + ",sign=" + b.getSign)
+      res.getCurrentNumber
+    }
   }
 
   def loadFromBlock(block: Int): PBlockEntry.Builder = {
@@ -290,7 +299,7 @@ object DCtrl extends LogHelper {
         log.debug("load block ok =" + b.getBlockHeight + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
           + ",sign=" + b.getSign)
         b
-      }else{
+      } else {
         log.debug("blk not found in AccountDB:" + block);
         null;
       }
