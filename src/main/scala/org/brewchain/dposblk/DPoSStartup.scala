@@ -64,7 +64,8 @@ class DPoSBGLoader() extends Runnable with OLog {
     Scheduler.scheduleWithFixedDelay(DCtrl.instance, DConfig.INITDELAY_DCTRL_SEC,
       DConfig.TICK_DCTRL_SEC, TimeUnit.SECONDS)
 
-    Daos.actdb.onStart("","","");
+      Daos.actdb.onStart(dposnet.root().bcuid, dposnet.root().v_address, dposnet.root().name)
+//    Daos
 //    Scheduler.scheduleWithFixedDelay(RSM.instance, RConfig.INITDELAY_RSM_SEC,
 //      RConfig.TICK_RSM_SEC, TimeUnit.SECONDS)
 
