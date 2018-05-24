@@ -21,6 +21,8 @@ import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntry
 import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntryOrBuilder
 
 import scala.collection.JavaConversions._
+import org.apache.commons.codec.binary.Base64
+
 //投票决定当前的节点
 case class DPosNodeController(network: Network) extends SRunner with LogHelper {
   def getName() = "DCTRL"
@@ -260,7 +262,8 @@ object DCtrl extends LogHelper {
   }
   def saveBlock(b: PBlockEntryOrBuilder): Unit = {
     if (!StringUtils.equals(b.getCoinbaseBcuid, curDN().getBcuid)) {
-      log.debug("save Block to AccountModule,H="+b.getBlockHeight+":from=" + b.getCoinbaseBcuid);
+      log.debug("save Block to AccountModule,H=" + b.getBlockHeight + ":from=" + b.getCoinbaseBcuid);
+//      log.debug("TRACE::BLH=["+Base64.encodeBase64String(b.getBlockHeader.toByteArray())+"]");
       Daos.blkHelper.ApplyBlock(b.getBlockHeader);
     }
     Daos.dposdb.put("D" + b.getBlockHeight, OValue.newBuilder()
@@ -268,7 +271,8 @@ object DCtrl extends LogHelper {
       .setInfo(b.getSign)
       .setNonce(b.getSliceId)
       .setSecondKey(b.getCoinbaseBcuid)
-      .setExtdata(b.getBlockHeader).build())
+      //      .setExtdata(b.getBlockHeader)
+      .build())
     log.debug("saveBlockOK:BLK=" + b.getBlockHeight + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
       + ",sign=" + b.getSign)
   }
@@ -276,16 +280,23 @@ object DCtrl extends LogHelper {
   def loadFromBlock(block: Int): PBlockEntry.Builder = {
     val ov = Daos.dposdb.get("D" + block).get
     if (ov != null) {
-      val b = PBlockEntry.newBuilder().setBlockHeader(ov.getExtdata)
-        .setBlockHeight(ov.getCount.asInstanceOf[Int])
-        .setSign(ov.getInfo)
-        .setSliceId(ov.getNonce)
-        .setCoinbaseBcuid(ov.getSecondKey)
-      log.debug("load block ok =" + b.getBlockHeight + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
-        + ",sign=" + b.getSign)
-      b
+      val blk = Daos.actdb.getBlockByNumber(block);
+      if (blk != null) {
+        val b = PBlockEntry.newBuilder().setBlockHeader(blk.toByteString())
+          .setBlockHeight(ov.getCount.asInstanceOf[Int])
+          .setSign(ov.getInfo)
+          .setSliceId(ov.getNonce)
+          .setCoinbaseBcuid(ov.getSecondKey)
+        log.debug("load block ok =" + b.getBlockHeight + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
+          + ",sign=" + b.getSign)
+        b
+      }else{
+        log.debug("blk not found in AccountDB:" + block);
+        null;
+      }
+
     } else {
-      log.debug("blk not found:" + block);
+      log.debug("blk not found in DPosDB:" + block);
       null
     }
 

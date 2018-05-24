@@ -58,11 +58,7 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
                 + ",CB=" + cn.getCurBlock);
               ret.setResult(CoinbaseResult.CR_PROVEN)
               //            if (pbo.getBlockHeight != cn.getCurBlock) {
-              DCtrl.saveBlock(PBlockEntry.newBuilder().setBlockHeader(pbo.getBlockHeader.toByteString())
-                .setBlockHeight(pbo.getBlockHeight)
-                .setCoinbaseBcuid(pbo.getCoAddress)
-                .setSign(pbo.getMessageId)
-                .setSliceId(pbo.getSliceId))
+              DCtrl.saveBlock(pbo.getBlockEntry)
               if (pbo.getBlockHeight > cn.getCurBlock) {
                 cn.setCurBlock(pbo.getBlockHeight)
                 DCtrl.instance.syncToDB();

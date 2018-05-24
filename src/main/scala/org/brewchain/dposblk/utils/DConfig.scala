@@ -15,7 +15,7 @@ object DConfig {
   val VOTE_QUORUM_RATIO = prop.get(PROP_DOMAIN + "vote.quorum.ratio", 60); //60%
 
   val SYNCBLK_MAX_RUNNER = prop.get(PROP_DOMAIN + "syncblk.max.runner", 10);
-  val SYNCBLK_WAITSEC_NEXTRUN = prop.get(PROP_DOMAIN + "syncblk.waitsec.nextrun", 10);
+  val SYNCBLK_WAITSEC_NEXTRUN = prop.get(PROP_DOMAIN + "syncblk.waitsec.nextrun", 10 * 1000);
   val SYNCBLK_WAITSEC_ALLRUN = prop.get(PROP_DOMAIN + "syncblk.waitsec.allrun", 600);
 
   val MAX_BLK_COUNT_PERTERM = prop.get(PROP_DOMAIN + "max.blk.count.perterm", 60);
@@ -46,7 +46,7 @@ object DConfig {
   val MAX_TIMEOUTSEC_FOR_REVOTE = prop.get(PROP_DOMAIN + "max.timeoutsec.for.revote", 30);
 
   val MAX_TNX_EACH_BLOCK = prop.get(PROP_DOMAIN + "max.tnx.each.block", 100);
-  
+
   val MAX_CWS_GUARANTY = prop.get(PROP_DOMAIN + "max.cws.guaranty", 10);
 
 }

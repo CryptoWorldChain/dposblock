@@ -22,6 +22,7 @@ import org.brewchain.dposblk.pbgens.Dposblock.PSCoinbase
 import org.brewchain.dposblk.Daos
 import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntry
 import org.brewchain.account.util.ByteUtil
+import org.apache.commons.codec.binary.Base64
 
 //获取其他节点的term和logidx，commitidx
 object DTask_MineBlock extends LogHelper with BitMap {
@@ -48,11 +49,13 @@ object DTask_MineBlock extends LogHelper with BitMap {
           .setCoAddress(cn.getCoAddress)
           .setMineTime(curtime)
           .setMessageId(msgid)
-          .setBlockHeader(PBlockEntry.newBuilder().setBlockHeight(newblockheight)
+          .setBlockEntry(PBlockEntry.newBuilder().setBlockHeight(newblockheight)
             .setCoinbaseBcuid(cn.getCoAddress).setSliceId(DCtrl.termMiner().getSliceId)
             .setBlockHeader(newblk.build().toByteString())
             .setSign("TOLIUBODOSIGN"))
-          .setSliceId(0)
+          .setSliceId(DCtrl.termMiner().getSliceId)
+          
+//          log.debug("TRACE::BLKSH=["+Base64.encodeBase64String(newCoinbase.getBlockHeader.getBlockHeader.toByteArray())+"]");
 
         cn.setLastDutyTime(System.currentTimeMillis());
         cn.setCurBlock(newblockheight)

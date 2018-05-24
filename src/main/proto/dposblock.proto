@@ -18,6 +18,8 @@ enum PCommand {
 	SYN = 5; //同步block
 	
 	VFY = 6;	 //块校验
+	
+	PVR = 7; //PBFT轮训记账投票结果
 	TTT = 30;//ping,pong,wall ,testing
 };
 
@@ -90,7 +92,7 @@ message  PSCoinbase{
 	string	term_sign = 8;
 	string 		bcuid = 10;//节点
 	int64	mine_time = 11;
-	PBlockEntry block_header = 20;
+	PBlockEntry block_entry = 20;
 	string 	message_id = 30;
 	
 }
