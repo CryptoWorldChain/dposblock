@@ -49,6 +49,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
           .setCoAddress(cn.getCoAddress)
           .setMineTime(curtime)
           .setMessageId(msgid)
+          .setBcuid(cn.getBcuid)
           .setBlockEntry(PBlockEntry.newBuilder().setBlockHeight(newblockheight)
             .setCoinbaseBcuid(cn.getCoAddress).setSliceId(DCtrl.termMiner().getSliceId)
             .setBlockHeader(newblk.build().toByteString())
