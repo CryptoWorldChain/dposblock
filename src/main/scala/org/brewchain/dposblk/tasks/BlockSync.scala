@@ -36,7 +36,7 @@ object BlockSync extends LogHelper {
       try {
         while (!running.compareAndSet(false, true)) {
           try {
-            log.debug("waiting for runnerSyncBatch:cur=" + cn.getCurBlock)
+            log.debug("waiting for runnerSyncBatch:curheight=" + + cn.getCurBlock+",runCounter="+runCounter.get)
             this.synchronized(this.wait(DConfig.SYNCBLK_WAITSEC_NEXTRUN))
           } catch {
             case t: InterruptedException =>

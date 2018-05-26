@@ -35,7 +35,7 @@ object DTask_CoMine extends LogHelper with BitMap {
     network.directNodes //.filter { n => !DCtrl.coMinerByUID.contains(n.bcuid) }
       .map { n =>
         val start = System.currentTimeMillis();
-        network.sendMessage("JINDOB", join, n, new CallBack[FramePacket] {
+        network.asendMessage("JINDOB", join, n, new CallBack[FramePacket] {
           def onSuccess(fp: FramePacket) = {
             try {
               val end = System.currentTimeMillis();

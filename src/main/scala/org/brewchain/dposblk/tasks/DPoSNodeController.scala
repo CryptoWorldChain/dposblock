@@ -91,11 +91,13 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
       OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
   }
   def updateBlockHeight(blockHeight: Int) = {
-    if (cur_dnode.getCurBlock < blockHeight) {
-      cur_dnode.setLastBlockTime(System.currentTimeMillis())
-      cur_dnode.setCurBlock(blockHeight)
-      syncToDB()
-    }
+    cur_dnode.synchronized({
+      if (cur_dnode.getCurBlock < blockHeight) {
+        cur_dnode.setLastBlockTime(System.currentTimeMillis())
+        cur_dnode.setCurBlock(blockHeight)
+        syncToDB()
+      }
+    })
   }
   def runOnce() = {
     Thread.currentThread().setName("DCTRL");
@@ -267,7 +269,6 @@ object DCtrl extends LogHelper {
     //      log.debug("TRACE::BLH=["+Base64.encodeBase64String(b.getBlockHeader.toByteArray())+"]");
 
     val res = Daos.blkHelper.ApplyBlock(b.getBlockHeader);
-
     if (res.getCurrentNumber > 0) {
       //    }
       //      Daos.dposdb.put("D" + b.getBlockHeight, OValue.newBuilder()
