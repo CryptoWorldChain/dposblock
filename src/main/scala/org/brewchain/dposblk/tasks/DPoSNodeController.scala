@@ -280,7 +280,7 @@ object DCtrl extends LogHelper {
         + ",sign=" + b.getSign)
       res.getCurrentNumber
     } else {
-      log.debug("cannot save Block:Height Not Equals=" + b.getBlockHeight + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
+      log.debug("cannot save Block:Height Not Equals=" + b.getBlockHeight + ",AB=" + res.getCurrentNumber + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
         + ",sign=" + b.getSign)
       res.getCurrentNumber
     }

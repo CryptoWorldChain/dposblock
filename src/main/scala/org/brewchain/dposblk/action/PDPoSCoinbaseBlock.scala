@@ -64,7 +64,7 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
                   log.debug("get mining block. larger than local db");
                   BlockSync.tryBackgroundSyncLogs(pbo.getBlockHeight, pbo.getBcuid)(DCtrl.dposNet())
                 case n if n > 0 =>
-                  ret.setResult(CoinbaseResult.CR_PROVEN)
+                  ret.setResult(CoinbaseResult.CR_PROVEN)  
                 case _ =>
                   ret.setResult(CoinbaseResult.CR_REJECT)
               }

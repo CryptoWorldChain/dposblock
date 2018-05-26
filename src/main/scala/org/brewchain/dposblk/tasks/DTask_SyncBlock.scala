@@ -37,7 +37,7 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
       network.sendMessage("SYNDOB", sync, n, new CallBack[FramePacket] {
         def onSuccess(fp: FramePacket) = {
           val end = System.currentTimeMillis();
-          log.debug("send SYNDOB success:to " + fastNodeID + ",cost=" + (end - start))
+          log.debug("send SYNDOB success:to " + fastNodeID + ",cost=" + (end - start)+",body="+fp.getBody)
           val ret = PRetSyncBlocks.newBuilder().mergeFrom(fp.getBody);
           if (ret.getRetCode() == 0) { //same message
 

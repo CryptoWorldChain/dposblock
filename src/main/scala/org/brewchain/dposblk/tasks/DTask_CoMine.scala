@@ -22,7 +22,7 @@ import org.brewchain.dposblk.pbgens.Dposblock.DNodeState
 //获取其他节点的term和logidx，commitidx
 object DTask_CoMine extends LogHelper with BitMap {
   def runOnce(implicit network: Network): PDNodeOrBuilder = {
-    Thread.currentThread().setName("RTask_Join");
+    Thread.currentThread().setName("DTask_Join");
     val join = PSCoMine.newBuilder().setDn(DCtrl.curDN()).build();
     val msgid = UUIDGenerator.generate();
     val cn = DCtrl.instance.cur_dnode;
