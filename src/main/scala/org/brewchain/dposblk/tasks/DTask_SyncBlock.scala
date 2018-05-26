@@ -43,26 +43,35 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
           runCounter.decrementAndGet();
           MDCSetBCUID(DCtrl.dposNet());
           MDCSetMessageID(messageid)
-          log.debug("send SYNDOB success:to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx)
-          val ret = PRetSyncBlocks.newBuilder().mergeFrom(fp.getBody);
-          if (ret.getRetCode() == 0) { //same message
+          try {
+            val ret = PRetSyncBlocks.newBuilder().mergeFrom(fp.getBody);
 
-            var maxid: Int = 0
-            val realmap = ret.getBlockHeadersList.filter { p => p.getBlockHeight >= startIdx && p.getBlockHeight <= endIdx }
-            //            if (realmap.size() == endIdx - startIdx + 1) {
-            realmap.map { b =>
-              log.debug("get bock height=" + b.getBlockHeight);
-              DCtrl.saveBlock(b);
-              if (b.getBlockHeight > maxid) {
-                maxid = b.getBlockHeight;
+            log.debug("send SYNDOB success:to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx + ",ret=" +
+              ret.getRetCode + ",count=" + ret.getBlockHeadersCount)
+
+            if (ret.getRetCode() == 0) { //same message
+
+              var maxid: Int = 0
+              val realmap = ret.getBlockHeadersList.filter { p => p.getBlockHeight >= startIdx && p.getBlockHeight <= endIdx }
+              //            if (realmap.size() == endIdx - startIdx + 1) {
+              log.debug("realBlockCount=" + realmap.size);
+              realmap.map { b =>
+                log.debug("get bock height=" + b.getBlockHeight);
+                DCtrl.saveBlock(b);
+                if (b.getBlockHeight > maxid) {
+                  maxid = b.getBlockHeight;
+                }
               }
+              DCtrl.instance.updateBlockHeight(maxid)
+              //!! DCtrl.instance.updateLastApplidId(maxid);
+              //            } else {
+              //              log.warn("cannot get enough entries:wanted:" + startIdx + "-->" + endIdx + ",returnsize=" +
+              //                ret.getEntriesList.size() + ",after Filter=" + realmap.size);
+              //            }
             }
-            DCtrl.instance.updateBlockHeight(maxid)
-            //!! DCtrl.instance.updateLastApplidId(maxid);
-            //            } else {
-            //              log.warn("cannot get enough entries:wanted:" + startIdx + "-->" + endIdx + ",returnsize=" +
-            //                ret.getEntriesList.size() + ",after Filter=" + realmap.size);
-            //            }
+          }catch{
+            case t:Throwable =>
+              log.warn("error In SyncBlock:"+t.getMessage,t);
           }
         }
         def onFailed(e: java.lang.Exception, fp: FramePacket) {
