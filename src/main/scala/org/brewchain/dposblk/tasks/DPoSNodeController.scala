@@ -22,6 +22,7 @@ import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntryOrBuilder
 
 import scala.collection.JavaConversions._
 import org.apache.commons.codec.binary.Base64
+import org.apache.commons.codec.binary.Hex
 
 //投票决定当前的节点
 case class DPosNodeController(network: Network) extends SRunner with LogHelper {
@@ -269,45 +270,43 @@ object DCtrl extends LogHelper {
 
     if (res.getCurrentNumber > 0) {
       //    }
-      Daos.dposdb.put("D" + b.getBlockHeight, OValue.newBuilder()
-        .setCount(b.getBlockHeight)
-        .setInfo(b.getSign)
-        .setNonce(b.getSliceId)
-        .setSecondKey(b.getCoinbaseBcuid)
-        //      .setExtdata(b.getBlockHeader)
-        .build())
-      log.debug("saveBlockOK:BLK=" + b.getBlockHeight + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
-        + ",sign=" + b.getSign)
+      //      Daos.dposdb.put("D" + b.getBlockHeight, OValue.newBuilder()
+      //        .setCount(b.getBlockHeight)
+      //        .setInfo(b.getSign)
+      //        .setNonce(b.getSliceId)
+      //        .setSecondKey(b.getCoinbaseBcuid)
+      //        //      .setExtdata(b.getBlockHeader)
+      //        .build())
+      log.debug("saveBlockOK:BLK=" + res.getCurrentNumber)
       res.getCurrentNumber
     } else {
-      log.debug("cannot save Block:Height Not Equals=" + b.getBlockHeight + ",AB=" + res.getCurrentNumber + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
-        + ",sign=" + b.getSign)
+      log.debug("cannot save Block:HeightMaybeERR:" + res.getCurrentNumber)
       res.getCurrentNumber
     }
   }
 
   def loadFromBlock(block: Int): PBlockEntry.Builder = {
-    val ov = Daos.dposdb.get("D" + block).get
-    if (ov != null) {
-      val blk = Daos.actdb.getBlockByNumber(block);
-      if (blk != null) {
-        val b = PBlockEntry.newBuilder().setBlockHeader(blk.toByteString())
-          .setBlockHeight(ov.getCount.asInstanceOf[Int])
-          .setSign(ov.getInfo)
-          .setSliceId(ov.getNonce)
-          .setCoinbaseBcuid(ov.getSecondKey)
-        log.debug("load block ok =" + b.getBlockHeight + ",S=" + b.getSliceId + ",CB=" + b.getCoinbaseBcuid
-          + ",sign=" + b.getSign)
-        b
-      } else {
-        log.debug("blk not found in AccountDB:" + block);
-        null;
-      }
-
+    //    val ov = Daos.dposdb.get("D" + block).get
+    //    if (ov != null) {
+    val blk = Daos.actdb.getBlockByNumber(block);
+    if (blk != null) {
+      val b = PBlockEntry.newBuilder().setBlockHeader(blk.toByteString())
+      //          .setBlockHeight(block)
+      //          .setSign(Hex.encodeHexString(blk.getHeader.getBlockHash.toByteArray()))
+      //          .setSliceId(blk.getHeader.getSliceId.asInstanceOf[Int])
+      //          .setCoinbaseBcuid(blk.getMiner.getAddress)
+      log.debug("load block ok =" + block + ",S=" + blk.getHeader.getSliceId + ",CB=" + blk.getMiner.getBcuid
+        + ",sign=" + Hex.encodeHexString(blk.getHeader.getBlockHash.toByteArray()))
+      b
     } else {
-      log.debug("blk not found in DPosDB:" + block);
-      null
+      log.debug("blk not found in AccountDB:" + block);
+      null;
     }
+
+    //    } else {
+    //      log.debug("blk not found in DPosDB:" + block);
+    //      null
+    //    }
 
   }
 

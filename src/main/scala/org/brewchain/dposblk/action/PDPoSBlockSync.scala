@@ -43,6 +43,7 @@ object PDPoSBlockSyncService extends LogHelper with PBUtils with LService[PSSync
       handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
     } else {
       try {
+        val startTime=System.currentTimeMillis();
         MDCSetBCUID(DCtrl.dposNet())
         MDCSetMessageID(pbo.getMessageId)
         ret.setMessageId(pbo.getMessageId);
@@ -64,6 +65,7 @@ object PDPoSBlockSyncService extends LogHelper with PBUtils with LService[PSSync
           }
         }
 
+        log.debug("SyncToClient:"+(System.currentTimeMillis()-startTime));
       } catch {
         case e: FBSException => {
           ret.clear()

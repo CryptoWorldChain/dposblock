@@ -38,9 +38,9 @@ object DTask_MineBlock extends LogHelper with BitMap {
         val newblockheight = cn.getCurBlock + 1
         log.debug("mining check ok :new block=" + newblockheight + ",CO=" + cn.getCoAddress
           + ",MaxTnx=" + DCtrl.termMiner().getMaxTnxEachBlock);
-        val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock, 
-            ByteUtil.EMPTY_BYTE_ARRAY
-            , ByteUtil.EMPTY_BYTE_ARRAY);
+        val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock,
+          ByteUtil.EMPTY_BYTE_ARRAY, ByteUtil.EMPTY_BYTE_ARRAY);
+        log.debug("MineNewBlock:" + newblk);
         val newCoinbase = PSCoinbase.newBuilder()
           .setBlockHeight(newblockheight).setCoAddress(cn.getCoAddress)
           .setTermId(DCtrl.termMiner().getTermId)
@@ -55,8 +55,8 @@ object DTask_MineBlock extends LogHelper with BitMap {
             .setBlockHeader(newblk.build().toByteString())
             .setSign("TOLIUBODOSIGN"))
           .setSliceId(DCtrl.termMiner().getSliceId)
-          
-//          log.debug("TRACE::BLKSH=["+Base64.encodeBase64String(newCoinbase.getBlockHeader.getBlockHeader.toByteArray())+"]");
+
+        //          log.debug("TRACE::BLKSH=["+Base64.encodeBase64String(newCoinbase.getBlockHeader.getBlockHeader.toByteArray())+"]");
 
         cn.setLastDutyTime(System.currentTimeMillis());
         cn.setCurBlock(newblockheight)

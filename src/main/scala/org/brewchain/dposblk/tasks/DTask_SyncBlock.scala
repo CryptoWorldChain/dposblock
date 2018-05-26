@@ -25,7 +25,10 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
   def runOnce() = {
     //
     try {
+      MDCSetBCUID(DCtrl.dposNet())
       val messageid = UUIDGenerator.generate();
+      MDCSetMessageID(messageid)
+
       val sync = PSSyncBlocks.newBuilder().setStartId(startIdx)
         .setEndId(endIdx).setDn(DCtrl.curDN()).setMessageId(messageid).build()
       val start = System.currentTimeMillis();
@@ -37,7 +40,10 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
       network.sendMessage("SYNDOB", sync, n, new CallBack[FramePacket] {
         def onSuccess(fp: FramePacket) = {
           val end = System.currentTimeMillis();
-          log.debug("send SYNDOB success:to " + fastNodeID + ",cost=" + (end - start)+",body="+fp.getBody)
+          runCounter.decrementAndGet();
+          MDCSetBCUID(DCtrl.dposNet());
+          MDCSetMessageID(messageid)
+          log.debug("send SYNDOB success:to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx)
           val ret = PRetSyncBlocks.newBuilder().mergeFrom(fp.getBody);
           if (ret.getRetCode() == 0) { //same message
 
@@ -60,14 +66,19 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
           }
         }
         def onFailed(e: java.lang.Exception, fp: FramePacket) {
-          log.debug("send SYNRAF ERROR " + n.uri + ",e=" + e.getMessage, e)
+          val end = System.currentTimeMillis();
+          runCounter.decrementAndGet();
+          MDCSetBCUID(DCtrl.dposNet());
+          MDCSetMessageID(messageid)
+          log.debug("send SYNDOB ERROR :to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx + n.uri + ",e=" + e.getMessage, e)
+
         }
       })
     } catch {
       case e: Throwable =>
         log.error("SyncError:" + e.getMessage, e)
     } finally {
-      runCounter.decrementAndGet();
+
     }
   }
 }
