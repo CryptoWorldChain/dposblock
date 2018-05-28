@@ -33,16 +33,6 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
   var term_Miner: PSDutyTermVote.Builder = PSDutyTermVote.newBuilder();
   var vote_Request: PSDutyTermVote.Builder = PSDutyTermVote.newBuilder();
 
-  val cur_blk_height = new AtomicInteger(1)
-
-  def nextBlock(): Long = {
-    cur_blk_height.incrementAndGet()
-  }
-
-  def retsetBlockHeight(hi: Int): Unit = {
-    cur_blk_height.set(hi)
-  }
-
   def updateVoteReq(pbo: PSDutyTermVote): Unit = {
     vote_Request = pbo.toBuilder()
     cur_dnode.setNodeCount(vote_Request.getCoNodes)
@@ -92,11 +82,11 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
   }
   def updateBlockHeight(blockHeight: Int) = {
     cur_dnode.synchronized({
-      if (cur_dnode.getCurBlock < blockHeight) {
+//      if (cur_dnode.getCurBlock < blockHeight) {
         cur_dnode.setLastBlockTime(System.currentTimeMillis())
         cur_dnode.setCurBlock(blockHeight)
         syncToDB()
-      }
+//      }
     })
   }
   def runOnce() = {
@@ -268,21 +258,11 @@ object DCtrl extends LogHelper {
     }
   }
   def saveBlock(b: PBlockEntryOrBuilder): Int = {
-    //    if (!StringUtils.equals(b.getCoinbaseBcuid, curDN().getBcuid)) {
     log.debug("save Block to AccountModule,H=" + b.getBlockHeight + ":from=" + b.getCoinbaseBcuid);
-    //      log.debug("TRACE::BLH=["+Base64.encodeBase64String(b.getBlockHeader.toByteArray())+"]");
-
     val res = Daos.blkHelper.ApplyBlock(b.getBlockHeader);
     if (res.getCurrentNumber > 0) {
-      //    }
-      //      Daos.dposdb.put("D" + b.getBlockHeight, OValue.newBuilder()
-      //        .setCount(b.getBlockHeight)
-      //        .setInfo(b.getSign)
-      //        .setNonce(b.getSliceId)
-      //        .setSecondKey(b.getCoinbaseBcuid)
-      //        //      .setExtdata(b.getBlockHeader)
-      //        .build())
       log.debug("saveBlockOK:BLK=" + res.getCurrentNumber)
+      DCtrl.instance.updateBlockHeight(res.getCurrentNumber)
       res.getCurrentNumber
     } else {
       log.debug("cannot save Block:HeightMaybeERR:" + res.getCurrentNumber)
