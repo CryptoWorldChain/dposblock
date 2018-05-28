@@ -209,55 +209,59 @@ object DCtrl extends LogHelper {
   }
 
   def checkMiner(block: Int, coaddr: String, mineTime: Long, maxWaitMS: Long = 1L): Boolean = {
-    val vr = voteRequest().getBlockRange;
-    val blkshouldMineMS = (block - vr.getStartBlock + 1) * vr.getEachBlockSec * 1000 + voteRequest().getTermStartMs
-    val realblkMineMS = mineTime;
-    val termblockLeft = block - vr.getEndBlock
-    minerByBlockHeight(block) match {
-      case Some(n) =>
-        if (coaddr.equals(n)) {
-          if (realblkMineMS < blkshouldMineMS) {
-            log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec + ",TermLeft=" + termblockLeft);
-            Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
-          }
-          true
-        } else {
-          if (realblkMineMS > blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) {
-            minerByBlockHeight(block + ((realblkMineMS - blkshouldMineMS) / DConfig.MAX_WAIT_BLK_EPOCH_MS).asInstanceOf[Int]) match {
-              case Some(n) =>
-                log.debug("Override miner for Next:check:" + blkshouldMineMS + ",realblkmine=" + realblkMineMS + ",n=" + n
-                  + ",coaddr=" + coaddr + ",c=" + coaddr + ",blocknext=" + (block + 1) + ",TermLeft=" + termblockLeft);
-                coaddr.equals(n)
-              case None =>
-                log.debug("wait for Miner:Should=" + blkshouldMineMS + ",Real=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec + ",TermLeft=" + termblockLeft);
-                false
-            }
-          } else {
-            log.debug("wait for timeout to Mine:ShouldT=" + (blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) + ",realblkmine=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec
-              + ",TermLeft=" + termblockLeft);
+    val tm = termMiner().getBlockRange;
+    if (block > tm.getEndBlock) {
+      true
+    } else {
+      val blkshouldMineMS = (block - tm.getStartBlock + 1) * tm.getEachBlockSec * 1000 + termMiner().getTermStartMs
+      val realblkMineMS = mineTime;
+      val termblockLeft = block - tm.getEndBlock
+      minerByBlockHeight(block) match {
+        case Some(n) =>
+          if (coaddr.equals(n)) {
             if (realblkMineMS < blkshouldMineMS) {
+              log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockSec + ",TermLeft=" + termblockLeft);
               Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
             }
-            false
-          }
+            true
+          } else {
+            if (realblkMineMS > blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) {
+              minerByBlockHeight(block + ((realblkMineMS - blkshouldMineMS) / DConfig.MAX_WAIT_BLK_EPOCH_MS).asInstanceOf[Int]) match {
+                case Some(n) =>
+                  log.debug("Override miner for Next:check:" + blkshouldMineMS + ",realblkmine=" + realblkMineMS + ",n=" + n
+                    + ",coaddr=" + coaddr + ",c=" + coaddr + ",blocknext=" + (block + 1) + ",TermLeft=" + termblockLeft);
+                  coaddr.equals(n)
+                case None =>
+                  log.debug("wait for Miner:Should=" + blkshouldMineMS + ",Real=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockSec + ",TermLeft=" + termblockLeft);
+                  false
+              }
+            } else {
+              log.debug("wait for timeout to Mine:ShouldT=" + (blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) + ",realblkmine=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockSec
+                + ",TermLeft=" + termblockLeft);
+              if (realblkMineMS < blkshouldMineMS) {
+                Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
+              }
+              false
+            }
 
-        }
-      case None =>
-        if (maxWaitMS >= 1 && realblkMineMS < blkshouldMineMS) {
-          log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + vr.getEachBlockSec + ",TermLeft=" + termblockLeft);
-          Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
-        }
-        false
+          }
+        case None =>
+          if (maxWaitMS >= 1 && realblkMineMS < blkshouldMineMS) {
+            log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockSec + ",TermLeft=" + termblockLeft);
+            Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
+          }
+          false
+      }
     }
   }
   def minerByBlockHeight(block: Int): Option[String] = {
-    val vr = voteRequest().getBlockRange;
-    if (block >= vr.getStartBlock && block <= vr.getEndBlock) {
-      Some(voteRequest().getMinerQueue(block - vr.getStartBlock)
+    val tm = termMiner().getBlockRange;
+    if (block >= tm.getStartBlock && block <= tm.getEndBlock) {
+      Some(termMiner().getMinerQueue(block - tm.getStartBlock)
         .getMinerCoaddr)
-    } else if (voteRequest().getMinerQueueCount > 0) {
-      Some(voteRequest().getMinerQueue(Math.abs(block - vr.getStartBlock)
-        % voteRequest().getMinerQueueCount)
+    } else if (block > tm.getStartBlock && termMiner().getMinerQueueCount > 0) {
+      Some(termMiner().getMinerQueue(Math.abs(block - tm.getStartBlock)
+        % termMiner().getMinerQueueCount)
         .getMinerCoaddr)
     } else {
       None
