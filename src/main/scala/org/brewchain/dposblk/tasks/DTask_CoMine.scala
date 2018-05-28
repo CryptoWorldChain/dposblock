@@ -30,7 +30,7 @@ object DTask_CoMine extends LogHelper with BitMap {
     var minCost: Long = Long.MaxValue;
     var maxBlockHeight: Long = 0;
     MDCSetBCUID(network)
-    
+
     val cdl = new CountDownLatch(network.directNodes.size)
     network.directNodes //.filter { n => !DCtrl.coMinerByUID.contains(n.bcuid) }
       .map { n =>
@@ -39,10 +39,16 @@ object DTask_CoMine extends LogHelper with BitMap {
           def onSuccess(fp: FramePacket) = {
             try {
               val end = System.currentTimeMillis();
-              val retjoin = PRetCoMine.newBuilder().mergeFrom(fp.getBody);
+              val retjoin = if (fp.getBody != null) {
+                PRetCoMine.newBuilder().mergeFrom(fp.getBody);
+              } else if (fp.getFbody != null && fp.getFbody.isInstanceOf[PRetCoMine]) {
+                fp.getFbody.asInstanceOf[PRetCoMine]
+              } else {
+                null;
+              }
               MDCSetBCUID(network)
-              log.debug("send JINDOB success:to " + n.uri + ",code=" + retjoin.getRetCode)
-              if (retjoin.getRetCode() == 0) { //same message
+              if (retjoin != null && retjoin.getRetCode() == 0) { //same message
+                log.debug("send JINDOB success:to " + n.uri + ",code=" + retjoin.getRetCode)
                 if (fastNode == null) {
                   fastNode = retjoin.getDn;
                 } else if (retjoin.getDn.getCurBlock > fastNode.getCurBlock) {
@@ -58,6 +64,8 @@ object DTask_CoMine extends LogHelper with BitMap {
                 if (retjoin.getCoResult == DNodeState.DN_CO_MINER) {
                   DCtrl.coMinerByUID.put(retjoin.getDn.getBcuid, retjoin.getDn);
                 }
+              }else{
+                log.debug("send JINDOB Failed " + n.uri + ",retobj=" + retjoin)
               }
             } finally {
               cdl.countDown()

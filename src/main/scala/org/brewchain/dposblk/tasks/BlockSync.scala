@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 object BlockSync extends LogHelper {
 
   val runCounter = new AtomicLong(0);
+  val maxReqHeight = new AtomicLong(0);
   val running = new AtomicBoolean(false);
   def tryBackgroundSyncLogs(block_max_wanted: Int, fastNodeID: String)(implicit network: Network): Unit = {
     Scheduler.runOnce(new Runnable() {
@@ -32,17 +33,28 @@ object BlockSync extends LogHelper {
     } else {
       val cn = DCtrl.instance.cur_dnode;
       //
-      log.debug("try sync block: Max block= " + block_max_wanted + ",cur=" + cn.getCurBlock + ",running=" + running.get)
+      //      log.debug("try sync block: Max block= " + block_max_wanted + ",cur=" + cn.getCurBlock + ",running=" + running.get)
       try {
+        maxReqHeight.synchronized({
+          if (maxReqHeight.get > block_max_wanted) {
+            log.debug("not need to sync block: Max block= " + block_max_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
+            return ;
+          } else {
+            maxReqHeight.set(block_max_wanted)
+          }
+        })
+        log.debug("try sync block: Max block= " + block_max_wanted + ",cur=" + cn.getCurBlock + ",running=" + running.get)
         while (!running.compareAndSet(false, true)) {
           try {
-            log.debug("waiting for runnerSyncBatch:curheight=" + + cn.getCurBlock+",runCounter="+runCounter.get)
+            log.debug("waiting for runnerSyncBatch:curheight=" + +cn.getCurBlock + ",runCounter=" + runCounter.get)
             this.synchronized(this.wait(DConfig.SYNCBLK_WAITSEC_NEXTRUN))
+
           } catch {
             case t: InterruptedException =>
             case e: Throwable =>
           }
         }
+
         //request log.
         val pagecount =
           ((block_max_wanted - cn.getCurBlock) / DConfig.SYNCBLK_PAGE_SIZE).asInstanceOf[Int]
@@ -63,10 +75,13 @@ object BlockSync extends LogHelper {
               runed = true;
             }
           })
+          val lastLogTime = System.currentTimeMillis();
           while (runCounter.get > DConfig.SYNCBLK_MAX_RUNNER) {
             //wait... for next runner
             try {
-              log.debug("waiting for runner:cur=" + runCounter.get)
+              if (System.currentTimeMillis() - lastLogTime > 10 * 1000) {
+                log.debug("waiting for runner:cur=" + runCounter.get)
+              }
               this.synchronized(this.wait(DConfig.SYNCBLK_WAITSEC_NEXTRUN))
             } catch {
               case t: InterruptedException =>

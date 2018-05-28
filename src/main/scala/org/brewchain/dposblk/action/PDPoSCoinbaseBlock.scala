@@ -37,7 +37,7 @@ class PDPoSCoinbaseBlock extends PSMDPoSNet[PSCoinbase] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PSCoinbase] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSCoinbase, handler: CompleteHandler) = {
-    log.debug("Mine Block From::" + pack.getFrom())
+//    log.debug("Mine Block From::" + pack.getFrom())
     var ret = PRetCoinbase.newBuilder();
     if (!DCtrl.isReady()) {
       log.debug("DCtrl not ready");
@@ -54,7 +54,7 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
         cn.synchronized {
           if (StringUtils.equals(pbo.getCoAddress, cn.getCoAddress) || pbo.getBlockHeight > cn.getCurBlock) {
             if (DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress, pbo.getMineTime)) {
-              log.debug("Miner is OK:B=" + pbo.getBlockHeight + ",CoAddr=" + pbo.getCoAddress
+              log.debug("newblock: height=" + pbo.getBlockHeight + ",CoAddr=" + pbo.getCoAddress
                 + ",T=" + pbo.getTermId + ",CT=" + DCtrl.termMiner().getTermId + ",TU=" + DCtrl.termMiner().getSign
                 + ",CB=" + cn.getCurBlock);
               //            if (pbo.getBlockHeight != cn.getCurBlock) {

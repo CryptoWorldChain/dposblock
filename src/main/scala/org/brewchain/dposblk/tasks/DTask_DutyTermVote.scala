@@ -17,9 +17,24 @@ import org.brewchain.dposblk.pbgens.Dposblock.PSDutyTermVote
 import org.brewchain.dposblk.pbgens.Dposblock.PSDutyTermVote.BlockRange
 import org.brewchain.dposblk.pbgens.Dposblock.PSDutyTermVote.TermBlock
 import org.apache.commons.lang3.StringUtils
+import org.brewchain.bcapi.gens.Oentity.OPair
+import java.util.concurrent.Future
+import org.fc.brewchain.p22p.core.Votes.NotConverge
 
 //获取其他节点的term和logidx，commitidx
 object DTask_DutyTermVote extends LogHelper {
+
+  def sleepToNextVote(records: Future[java.util.List[OPair]], vq: PSDutyTermVote.Builder): Unit = {
+    val ban_sec = (Math.abs(Math.random() * 100000 % (DConfig.BAN_MAXSEC_FOR_VOTE_REJECT - DConfig.BAN_MINSEC_FOR_VOTE_REJECT)) +
+      DConfig.BAN_MINSEC_FOR_VOTE_REJECT).asInstanceOf[Long]
+    //    log.debug("Undecisible but not converge.ban sleep=" + ban_sec)
+    if (System.currentTimeMillis() - vq.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
+      //      log.debug("remove undecisible vote for timeout:" + (System.currentTimeMillis() - vq.getTermStartMs));
+      Daos.dposdb.batchDelete(records.get.map { p => p.getKey }.toArray)
+      vq.clear();
+    }
+    Thread.sleep(ban_sec * 1000)
+  }
   def checkVoteDB(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
     val records = Daos.dposdb.listBySecondKey("D" + vq.getTermId + "-" + vq.getSign)
     log.debug("check db status:B[=" + vq.getBlockRange.getStartBlock + ","
@@ -53,43 +68,28 @@ object DTask_DutyTermVote extends LogHelper {
             DCtrl.instance.updateTerm()
             true
           } else if (n == VoteResult.VR_REJECT) {
-            val ban_sec = (Math.abs(Math.random() * 100000 % (DConfig.BAN_MAXSEC_FOR_VOTE_REJECT - DConfig.BAN_MINSEC_FOR_VOTE_REJECT)) +
-              DConfig.BAN_MINSEC_FOR_VOTE_REJECT).asInstanceOf[Long]
-            log.debug("Vote reject:" + n + ",ban and sleep:" + ban_sec);
-            Daos.dposdb.batchDelete(records.get.map { p => p.getKey }.toArray)
-            vq.clear();
-            Thread.sleep(ban_sec * 1000)
+            sleepToNextVote(records, vq)
             //              RSM.resetVoteRequest();
             false
           } else {
-            val ban_sec = (Math.abs(Math.random() * 100000 % (DConfig.BAN_MAXSEC_FOR_VOTE_REJECT - DConfig.BAN_MINSEC_FOR_VOTE_REJECT)) +
-              DConfig.BAN_MINSEC_FOR_VOTE_REJECT).asInstanceOf[Long]
-            log.debug("unknow vote state:" + n + ",ban and sleep:" + ban_sec)
-            Daos.dposdb.batchDelete(records.get.map { p => p.getKey }.toArray)
-            vq.clear();
-            Thread.sleep(ban_sec * 1000)
+            sleepToNextVote(records, vq)
             //              RSM.resetVoteRequest();
             false
           }
         case n: Undecisible =>
-          if (records.get.size() == DCtrl.termMiner().getCoNodes - 1) {
-            val ban_sec = (Math.abs(Math.random() * 100000 % (DConfig.BAN_MAXSEC_FOR_VOTE_REJECT - DConfig.BAN_MINSEC_FOR_VOTE_REJECT)) +
-              DConfig.BAN_MINSEC_FOR_VOTE_REJECT).asInstanceOf[Long]
-            log.debug("Undecisible but not converge.ban sleep=" + ban_sec)
-            if (System.currentTimeMillis() - vq.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
-              log.debug("remove undecisible vote for timeout:"+(System.currentTimeMillis() - vq.getTermStartMs));
-              Daos.dposdb.batchDelete(records.get.map { p => p.getKey }.toArray)
-              vq.clear();
-            }
-            Thread.sleep(ban_sec * 1000)
-
+          if (records.get.size() >= DCtrl.termMiner().getCoNodes - 1) {
+            sleepToNextVote(records, vq)
             //          !!    RSM.resetVoteRequest();
           } else {
             log.debug("cannot decide vote state, wait other response")
           }
           false
+        case n: NotConverge =>
+          sleepToNextVote(records, vq)
+          false
         case a @ _ =>
           log.debug("not converge,try next time:::" + a)
+          sleepToNextVote(records, vq)
           //            RSM.resetVoteRequest();
           false
       }
@@ -143,7 +143,7 @@ object DTask_DutyTermVote extends LogHelper {
         .setSliceId(1)
         .setMaxTnxEachBlock(DConfig.MAX_TNX_EACH_BLOCK)
         .setTermStartMs(System.currentTimeMillis());
-      
+
       newterm.setTermEndMs(DConfig.DTV_TIME_MS_EACH_BLOCK * mineBlockCount);
 
       newterm.setTermId(tm.getTermId + 1)
