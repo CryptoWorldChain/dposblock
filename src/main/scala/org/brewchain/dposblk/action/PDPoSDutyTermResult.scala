@@ -64,7 +64,7 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
         // 
         //            val records = Daos.dposdb.listBySecondKey("D" + vq.getTermId + "-" + vq.getSign)
         Daos.dposdb.put(
-          "V" + vq.getTermId + "-" + vq.getSign + "-"
+          "V" + pbo.getTermId + "-" + pbo.getSign + "-"
             + pbo.getBcuid,
           OValue.newBuilder()
             .setCount(pbo.getTermId)
@@ -72,7 +72,7 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
             .setExtdata(pbo.toByteString())
             .setInfo(pbo.getVoteAddress)
             .setNonce(pbo.getResultValue).build())
-        log.debug("Get Grant DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
+        log.debug("Get  DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
           + ",sign=" + pbo.getSign + ",VA=" + pbo.getVoteAddress + ",Result=" + pbo.getResult);
         DTask_DutyTermVote.synchronized({ DTask_DutyTermVote.notifyAll() })
         //

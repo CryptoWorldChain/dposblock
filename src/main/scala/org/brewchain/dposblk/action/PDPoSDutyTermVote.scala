@@ -80,6 +80,7 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
               ret.setResult(VoteResult.VR_GRANTED)
               ret.setTermId(pbo.getTermId)
               ret.setSign(pbo.getSign)
+              
               ret.setVoteAddress(cn.getCoAddress)
               DCtrl.instance.updateVoteReq(pbo);
             }
