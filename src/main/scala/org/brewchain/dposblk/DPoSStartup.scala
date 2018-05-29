@@ -15,6 +15,7 @@ import org.brewchain.dposblk.tasks.DCtrl
 import org.brewchain.dposblk.tasks.DPosNodeController
 import org.brewchain.dposblk.utils.DConfig
 import org.brewchain.dposblk.tasks.Scheduler
+import org.fc.brewchain.p22p.utils.LogHelper
 
 @NActorProvider
 class DPoSStartup extends PSMDPoSNet[Message] {
@@ -38,7 +39,7 @@ class DPoSStartup extends PSMDPoSNet[Message] {
 
 }
 
-class DPoSBGLoader() extends Runnable with OLog {
+class DPoSBGLoader() extends Runnable  with LogHelper {
   def run() = {
     URLHelper.init();
     while (!Daos.isDbReady() //        || MessageSender.sockSender.isInstanceOf[NonePackSender]
@@ -54,21 +55,23 @@ class DPoSBGLoader() extends Runnable with OLog {
     while (dposnet == null
       || dposnet.node_bits().bitCount <= 0 || !dposnet.inNetwork()) {
       dposnet = Daos.pzp.networkByID("dpos")
+      if (dposnet != null) {
+        MDCSetBCUID(dposnet)
+      }
       log.debug("dposnet not ready. dposnet=" + dposnet)
       Thread.sleep(5000);
     }
     log.debug("dposnet.initOK:My Node" + dposnet.root()) // my node
-//    RSM.instance = RaftStateManager(raftnet);
+    //    RSM.instance = RaftStateManager(raftnet);
 
     DCtrl.instance = DPosNodeController(dposnet);
     Scheduler.scheduleWithFixedDelay(DCtrl.instance, DConfig.INITDELAY_DCTRL_SEC,
       DConfig.TICK_DCTRL_SEC, TimeUnit.SECONDS)
 
-      Daos.actdb.onStart(dposnet.root().bcuid, dposnet.root().v_address, dposnet.root().name)
-//    Daos
-//    Scheduler.scheduleWithFixedDelay(RSM.instance, RConfig.INITDELAY_RSM_SEC,
-//      RConfig.TICK_RSM_SEC, TimeUnit.SECONDS)
-
+    Daos.actdb.onStart(dposnet.root().bcuid, dposnet.root().v_address, dposnet.root().name)
+    //    Daos
+    //    Scheduler.scheduleWithFixedDelay(RSM.instance, RConfig.INITDELAY_RSM_SEC,
+    //      RConfig.TICK_RSM_SEC, TimeUnit.SECONDS)
 
   }
 }

@@ -28,6 +28,7 @@ import org.brewchain.dposblk.Daos
 import org.brewchain.bcapi.gens.Oentity.OValue
 import org.brewchain.bcapi.gens.Oentity.OKey
 import com.google.protobuf.ByteString
+import org.brewchain.dposblk.tasks.DTask_DutyTermVote
 
 @NActorProvider
 @Instantiate
@@ -40,7 +41,7 @@ class PDPoSDutyTermResult extends PSMDPoSNet[PDutyTermResult] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTermResult] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PDutyTermResult, handler: CompleteHandler) = {
-//    log.debug("DPoS DutyTermResult::" + pack.getFrom())
+    //    log.debug("DPoS DutyTermResult::" + pack.getFrom())
     var ret = PDutyTermResult.newBuilder();
     val net = DCtrl.instance.network;
     if (!DCtrl.isReady() || net == null) {
@@ -71,10 +72,9 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
             .setExtdata(pbo.toByteString())
             .setInfo(pbo.getVoteAddress)
             .setNonce(pbo.getResultValue).build())
-//        RTask_DutyTermVote.checkVoteDB(vq)(net);
         log.debug("Get Grant DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
           + ",sign=" + pbo.getSign + ",VA=" + pbo.getVoteAddress + ",Result=" + pbo.getResult);
-
+        DTask_DutyTermVote.synchronized({ DTask_DutyTermVote.notifyAll() })
         //
         //          }
         //        })

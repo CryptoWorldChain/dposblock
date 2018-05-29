@@ -33,7 +33,9 @@ object DTask_DutyTermVote extends LogHelper {
       Daos.dposdb.batchDelete(records.get.map { p => p.getKey }.toArray)
       vq.clear();
     }
-    Thread.sleep(ban_sec * 1000)
+    DTask_DutyTermVote.synchronized({
+      DTask_DutyTermVote.wait(ban_sec * 1000)
+    })
   }
   def checkVoteDB(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
     val records = Daos.dposdb.listBySecondKey("D" + vq.getTermId + "-" + vq.getSign)
