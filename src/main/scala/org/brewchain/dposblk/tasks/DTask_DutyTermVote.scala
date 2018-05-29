@@ -65,7 +65,11 @@ object DTask_DutyTermVote extends LogHelper {
         case Converge(n) =>
           log.debug("converge:" + n);
           if (n == VoteResult.VR_GRANTED) {
-            log.debug("Vote Granted will be the new terms:" + vq);
+            log.debug("Vote Granted will be the new terms:T="
+              + vq.getTermId
+              + ",sign=" + vq.getSign
+              + ",N=" + vq.getCoNodes+":"
+              + vq.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr));
             DCtrl.instance.term_Miner = vq.clone()
             DCtrl.instance.updateTerm()
             true
@@ -155,7 +159,7 @@ object DTask_DutyTermVote extends LogHelper {
 
       val rand = Math.random() * 1000
       val rdns = scala.util.Random.shuffle(DCtrl.coMinerByUID);
-      log.debug(" rdns=" + rdns.foldLeft("")((a, b) => a + "," + b._1));
+      //      log.debug(" rdns=" + rdns.foldLeft("")((a, b) => a + "," + b._1));
       var i = newterm.getBlockRange.getStartBlock;
       var bitcc = BigInt(0);
 
@@ -169,7 +173,7 @@ object DTask_DutyTermVote extends LogHelper {
           }
         }
       }
-      log.debug("mineQ=" + newterm.getMinerQueueList)
+      log.debug("mineQ=" + newterm.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr))
 
       log.debug("get coMinerNodeCount=" + DCtrl.coMinerByUID.size + ",NetworkDNodecount=" + network.directNodeByBcuid.size);
 

@@ -40,7 +40,7 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
       network.sendMessage("SYNDOB", sync, n, new CallBack[FramePacket] {
         def onSuccess(fp: FramePacket) = {
           val end = System.currentTimeMillis();
-          runCounter.decrementAndGet();
+
           MDCSetBCUID(DCtrl.dposNet());
           MDCSetMessageID(messageid)
           try {
@@ -57,7 +57,7 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
               log.debug("realBlockCount=" + realmap.size);
               realmap.map { b =>
                 log.debug("get bock height=" + b.getBlockHeight);
-                val acceptedHeight=DCtrl.saveBlock(b);
+                val acceptedHeight = DCtrl.saveBlock(b);
                 if (acceptedHeight > maxid) {
                   maxid = acceptedHeight;
                 }
@@ -69,25 +69,24 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
               //                ret.getEntriesList.size() + ",after Filter=" + realmap.size);
               //            }
             }
-          }catch{
-            case t:Throwable =>
-              log.warn("error In SyncBlock:"+t.getMessage,t);
+          } catch {
+            case t: Throwable =>
+              log.warn("error In SyncBlock:" + t.getMessage, t);
           }
         }
         def onFailed(e: java.lang.Exception, fp: FramePacket) {
           val end = System.currentTimeMillis();
-          runCounter.decrementAndGet();
           MDCSetBCUID(DCtrl.dposNet());
           MDCSetMessageID(messageid)
           log.debug("send SYNDOB ERROR :to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx + n.uri + ",e=" + e.getMessage, e)
-
         }
       })
+
     } catch {
       case e: Throwable =>
         log.error("SyncError:" + e.getMessage, e)
     } finally {
-
+      runCounter.decrementAndGet();
     }
   }
 }

@@ -35,36 +35,42 @@ object DTask_MineBlock extends LogHelper with BitMap {
       if (DCtrl.checkMiner(cn.getCurBlock + 1, cn.getCoAddress, curtime,
         DConfig.BLK_EPOCH_SEC * 1000)) {
         MDCSetBCUID(network)
-        val newblockheight = cn.getCurBlock + 1
-        log.debug("mining check ok :new block=" + newblockheight + ",CO=" + cn.getCoAddress
-          + ",MaxTnx=" + DCtrl.termMiner().getMaxTnxEachBlock);
         val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock,
           ByteUtil.EMPTY_BYTE_ARRAY, ByteUtil.EMPTY_BYTE_ARRAY);
-        log.debug("MineNewBlock:" + newblk);
-        val newCoinbase = PSCoinbase.newBuilder()
-          .setBlockHeight(newblockheight).setCoAddress(cn.getCoAddress)
-          .setTermId(DCtrl.termMiner().getTermId)
-          .setCoNodes(DCtrl.coMinerByUID.size)
-          .setTermSign(DCtrl.termMiner().getSign)
-          .setCoAddress(cn.getCoAddress)
-          .setMineTime(curtime)
-          .setMessageId(msgid)
-          .setBcuid(cn.getBcuid)
-          .setBlockEntry(PBlockEntry.newBuilder().setBlockHeight(newblockheight)
-            .setCoinbaseBcuid(cn.getCoAddress).setSliceId(DCtrl.termMiner().getSliceId)
-            .setBlockHeader(newblk.build().toByteString())
-            .setSign("TOLIUBODOSIGN"))
-          .setSliceId(DCtrl.termMiner().getSliceId)
+        val newblockheight = cn.getCurBlock + 1
+        if (newblockheight != newblk.getHeader.getNumber) {
+          log.debug("mining error: ch=" + newblockheight + ",dbh=" + newblk.getHeader.getNumber);
+          false;
+        } else {
+          //        log.debug("MineNewBlock:" + newblk);
+          log.debug("mining check ok :new block=" + newblockheight + ",CO=" + cn.getCoAddress
+            + ",MaxTnx=" + DCtrl.termMiner().getMaxTnxEachBlock + ",hash=" + newblk.getHeader.getBlockHash);
 
-        //          log.debug("TRACE::BLKSH=["+Base64.encodeBase64String(newCoinbase.getBlockHeader.getBlockHeader.toByteArray())+"]");
+          val newCoinbase = PSCoinbase.newBuilder()
+            .setBlockHeight(newblockheight).setCoAddress(cn.getCoAddress)
+            .setTermId(DCtrl.termMiner().getTermId)
+            .setCoNodes(DCtrl.coMinerByUID.size)
+            .setTermSign(DCtrl.termMiner().getSign)
+            .setCoAddress(cn.getCoAddress)
+            .setMineTime(curtime)
+            .setMessageId(msgid)
+            .setBcuid(cn.getBcuid)
+            .setBlockEntry(PBlockEntry.newBuilder().setBlockHeight(newblockheight)
+              .setCoinbaseBcuid(cn.getCoAddress).setSliceId(DCtrl.termMiner().getSliceId)
+              .setBlockHeader(newblk.build().toByteString())
+              .setSign("TOLIUBODOSIGN"))
+            .setSliceId(DCtrl.termMiner().getSliceId)
 
-        cn.setLastDutyTime(System.currentTimeMillis());
-        cn.setCurBlock(newblockheight)
-        DCtrl.instance.syncToDB()
+          //          log.debug("TRACE::BLKSH=["+Base64.encodeBase64String(newCoinbase.getBlockHeader.getBlockHeader.toByteArray())+"]");
 
-        network.dwallMessage("MINDOB", Left(newCoinbase.build()), msgid)
+          cn.setLastDutyTime(System.currentTimeMillis());
+          cn.setCurBlock(newblockheight)
+          DCtrl.instance.syncToDB()
 
-        true
+          network.dwallMessage("MINDOB", Left(newCoinbase.build()), msgid)
+
+          true
+        }
       } else {
         log.debug("waiting for my mine block:" + (cn.getCurBlock + 1) + ",CO=" + cn.getCoAddress
           + ",TU=" + DCtrl.termMiner().getLastTermUid);

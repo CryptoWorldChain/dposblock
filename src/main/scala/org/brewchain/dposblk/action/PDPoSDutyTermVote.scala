@@ -37,7 +37,7 @@ class PDPoSDutyTermVote extends PSMDPoSNet[PSDutyTermVote] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSDutyTermVote] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSDutyTermVote, handler: CompleteHandler) = {
-    log.debug("DPoS DutyTermVoteService::" + pack.getFrom())
+//    log.debug("DPoS DutyTermVoteService::" + pack.getFrom())
     var ret = PDutyTermResult.newBuilder();
     val net = DCtrl.instance.network;
     if (!DCtrl.isReady() || net == null) {

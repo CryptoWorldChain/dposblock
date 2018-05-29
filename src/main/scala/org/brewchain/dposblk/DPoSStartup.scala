@@ -48,8 +48,6 @@ class DPoSBGLoader() extends Runnable  with LogHelper {
       Thread.sleep(1000);
     }
 
-    log.debug("Ready to Start..:pzp=" + Daos.pzp + ",dposdb=" + Daos.dposdb)
-
     var dposnet = Daos.pzp.networkByID("dpos")
 
     while (dposnet == null
@@ -61,7 +59,7 @@ class DPoSBGLoader() extends Runnable  with LogHelper {
       log.debug("dposnet not ready. dposnet=" + dposnet)
       Thread.sleep(5000);
     }
-    log.debug("dposnet.initOK:My Node" + dposnet.root()) // my node
+    log.debug("dposnet.initOK:My Node=" + dposnet.root()) // my node
     //    RSM.instance = RaftStateManager(raftnet);
 
     DCtrl.instance = DPosNodeController(dposnet);

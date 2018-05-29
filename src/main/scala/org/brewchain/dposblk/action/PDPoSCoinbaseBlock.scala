@@ -37,7 +37,7 @@ class PDPoSCoinbaseBlock extends PSMDPoSNet[PSCoinbase] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PSCoinbase] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSCoinbase, handler: CompleteHandler) = {
-//    log.debug("Mine Block From::" + pack.getFrom())
+    //    log.debug("Mine Block From::" + pack.getFrom())
     var ret = PRetCoinbase.newBuilder();
     if (!DCtrl.isReady()) {
       log.debug("DCtrl not ready");
@@ -54,17 +54,18 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
         cn.synchronized {
           if (StringUtils.equals(pbo.getCoAddress, cn.getCoAddress) || pbo.getBlockHeight > cn.getCurBlock) {
             if (DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress, pbo.getMineTime)) {
-              log.debug("newblock: height=" + pbo.getBlockHeight + ",CoAddr=" + pbo.getCoAddress
-                + ",T=" + pbo.getTermId + ",CT=" + DCtrl.termMiner().getTermId + ",TU=" + DCtrl.termMiner().getSign
-                + ",CB=" + cn.getCurBlock);
+              //              log.debug("newblock: height=" + pbo.getBlockHeight + ",CoAddr=" + pbo.getCoAddress
+              //                + ",T=" + pbo.getTermId + ",CT=" + DCtrl.termMiner().getTermId + ",TU=" + DCtrl.termMiner().getSign
+              //                + ",CB=" + cn.getCurBlock);
               //            if (pbo.getBlockHeight != cn.getCurBlock) {
               DCtrl.saveBlock(pbo.getBlockEntry) match {
                 case n if n > 0 && n < pbo.getBlockHeight =>
                   ret.setResult(CoinbaseResult.CR_PROVEN)
-                  log.debug("get mining block. larger than local db:Remote="+pbo.getBlockHeight+",Curr="+n);
+                  log.debug("newblock:failed,H=" + pbo.getBlockHeight + ",DBH=" + n + ":coadrr=" + pbo.getCoAddress);
                   BlockSync.tryBackgroundSyncLogs(pbo.getBlockHeight, pbo.getBcuid)(DCtrl.dposNet())
                 case n if n > 0 =>
-                  ret.setResult(CoinbaseResult.CR_PROVEN)  
+                  log.debug("newblock:ok,H=" + pbo.getBlockHeight + ",DBH=" + n + ":coadrr=" + pbo.getCoAddress)
+                  ret.setResult(CoinbaseResult.CR_PROVEN)
                 case _ =>
                   ret.setResult(CoinbaseResult.CR_REJECT)
               }

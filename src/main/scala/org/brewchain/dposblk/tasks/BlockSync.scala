@@ -103,7 +103,10 @@ object BlockSync extends LogHelper {
           }
         }
         while (runCounter.get > 0) {
-          log.debug("waiting for log syncs:" + runCounter.get);
+          if (System.currentTimeMillis() - lastLogTime > 10 * 1000) {
+            log.debug("waiting for log syncs:" + runCounter.get);
+            lastLogTime = System.currentTimeMillis()
+          }
           this.synchronized(Thread.sleep(DConfig.SYNCBLK_WAITSEC_NEXTRUN))
         }
         log.debug("finished init follow up logs:" + DCtrl.curDN().getCurBlock);
