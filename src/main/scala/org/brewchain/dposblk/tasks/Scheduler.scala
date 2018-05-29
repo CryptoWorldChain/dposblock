@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledFuture
 
 object Scheduler extends OLog {
   val scheduler = new ScheduledThreadPoolExecutor(100);
+  val schedulerManager = new ScheduledThreadPoolExecutor(10);
   def shutdown() {
     scheduler.shutdown()
   }
@@ -37,6 +38,9 @@ object Scheduler extends OLog {
   }
   def runOnce(runner: Runnable): Unit = {
     scheduler.submit(runner);
+  }
+  def runManager(runner: Runnable): Unit = {
+    schedulerManager.submit(runner);
   }
 
   def updateRunner(group: String, addr: String, runner: Runnable, delay: Long) = {

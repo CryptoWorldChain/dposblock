@@ -21,7 +21,7 @@ object BlockSync extends LogHelper {
   val maxReqHeight = new AtomicLong(0);
   val running = new AtomicBoolean(false);
   def tryBackgroundSyncLogs(block_max_wanted: Int, fastNodeID: String)(implicit network: Network): Unit = {
-    Scheduler.runOnce(new Runnable() {
+    Scheduler.runManager(new Runnable() {
       def run() {
         BlockSync.trySyncBlock(block_max_wanted, fastNodeID);
       }
