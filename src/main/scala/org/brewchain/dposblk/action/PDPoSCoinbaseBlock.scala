@@ -53,7 +53,7 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
         ret.setRetCode(0).setRetMessage("SUCCESS")
         cn.synchronized {
           if (StringUtils.equals(pbo.getCoAddress, cn.getCoAddress) || pbo.getBlockHeight > cn.getCurBlock) {
-            if (DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress, pbo.getMineTime)) {
+            if (pbo.getTermId>DCtrl.termMiner().getTermId||DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress, pbo.getMineTime)) {
               //              log.debug("newblock: height=" + pbo.getBlockHeight + ",CoAddr=" + pbo.getCoAddress
               //                + ",T=" + pbo.getTermId + ",CT=" + DCtrl.termMiner().getTermId + ",TU=" + DCtrl.termMiner().getSign
               //                + ",CB=" + cn.getCurBlock);
@@ -62,7 +62,7 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
                 case n if n > 0 && n < pbo.getBlockHeight =>
                   ret.setResult(CoinbaseResult.CR_PROVEN)
                   log.debug("newblock:failed,H=" + pbo.getBlockHeight + ",DBH=" + n + ":coadrr=" + pbo.getCoAddress);
-                  BlockSync.tryBackgroundSyncLogs(pbo.getBlockHeight, pbo.getBcuid)(DCtrl.dposNet())
+                  BlockSync.tryBackgroundSyncLogs(pbo.getBlockHeight, pbo.getCoAddress)(DCtrl.dposNet())
                 case n if n > 0 =>
                   log.debug("newblock:ok,H=" + pbo.getBlockHeight + ",DBH=" + n + ":coadrr=" + pbo.getCoAddress)
                   ret.setResult(CoinbaseResult.CR_PROVEN)

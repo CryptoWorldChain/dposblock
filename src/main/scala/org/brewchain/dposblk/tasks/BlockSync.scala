@@ -29,7 +29,7 @@ object BlockSync extends LogHelper {
   }
   def trySyncBlock(block_max_wanted: Int, fastNodeID: String)(implicit network: Network): Unit = {
     if (network.nodeByBcuid(fastNodeID) == network.noneNode) {
-      log.debug("cannot sync log bcuid not found in dposnet:" + fastNodeID);
+      log.debug("cannot sync log bcuid not found in dposnet:nodeid=" + fastNodeID+":");
     } else {
       val cn = DCtrl.instance.cur_dnode;
       //

@@ -52,7 +52,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
       if (!StringUtils.equals(cur_dnode.getBcuid, root_node.bcuid)) {
         log.warn("load from dnode info not equals with pzp node:" + cur_dnode + ",root=" + root_node)
       } else {
-        log.info("load from db:OK" + cur_dnode)
+        log.info("load from db:OK:" + cur_dnode)
       }
     }
 
@@ -129,28 +129,45 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
               cur_dnode.setState(DNodeState.DN_DUTY_MINER);
             }
           case DNodeState.DN_DUTY_MINER =>
+            if (cur_dnode.getCurBlock == term_Miner.getBlockRange.getEndBlock) {
+              //
+              if (DCtrl.voteRequest().getLastTermId >= term_Miner.getTermId) {
+                log.debug("cur term force to end:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
+                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId + ",tid=" + term_Miner.getTermId);
+              } else {
+                log.debug("vq not normal:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
+                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId + ",tid=" + term_Miner.getTermId);
+              }
+              continue = true;
+              cur_dnode.setState(DNodeState.DN_CO_MINER);
+            }else
             if (DTask_MineBlock.runOnce) {
               if (cur_dnode.getCurBlock >= DCtrl.voteRequest().getBlockRange.getEndBlock
                 || term_Miner.getTermId < vote_Request.getTermId) {
-                val sleept = Math.abs((Math.random() * DConfig.DTV_TIME_MS_EACH_BLOCK).asInstanceOf[Long]) + 10;
+                val sleept = Math.abs((Math.random() * 100000000 % DConfig.DTV_TIME_MS_EACH_BLOCK).asInstanceOf[Long]) + 10;
                 log.debug("cur term WILL end:newblk=" + cur_dnode.getCurBlock + ",term[" + DCtrl.voteRequest().getBlockRange.getStartBlock
-                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",T=" + term_Miner.getTermId+",sleep="+sleept);
+                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",T=" + term_Miner.getTermId + ",sleep=" + sleept);
                 continue = true;
                 cur_dnode.setState(DNodeState.DN_CO_MINER);
-                Thread.sleep(sleept);
+                DTask_DutyTermVote.synchronized({
+                  DTask_DutyTermVote.wait(sleept)
+                });
                 true
               } else {
-//                log.debug("cur term NOT end:newblk=" + cur_dnode.getCurBlock + ",term[" + DCtrl.voteRequest().getBlockRange.getStartBlock
-//                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]");
+                //                log.debug("cur term NOT end:newblk=" + cur_dnode.getCurBlock + ",term[" + DCtrl.voteRequest().getBlockRange.getStartBlock
+                //                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]");
                 false
               }
             } else {
               //check who mining.
               if (cur_dnode.getCurBlock >= DCtrl.voteRequest().getBlockRange.getEndBlock) {
                 continue = true;
-                val sleept = Math.abs((Math.random() * DConfig.DTV_TIME_MS_EACH_BLOCK).asInstanceOf[Long]) + 10;
+                val sleept = Math.abs((Math.random() * 10000000 % DConfig.DTV_TIME_MS_EACH_BLOCK).asInstanceOf[Long]) + 10;
                 cur_dnode.setState(DNodeState.DN_CO_MINER);
-                Thread.sleep(sleept);
+                //Thread.sleep(sleept);
+                DTask_DutyTermVote.synchronized({
+                  DTask_DutyTermVote.wait(sleept)
+                });
                 true
               } else {
                 false
@@ -193,9 +210,9 @@ object DCtrl extends LogHelper {
 
   def checkMiner(block: Int, coaddr: String, mineTime: Long, maxWaitMS: Long = 1L): Boolean = {
     val tm = termMiner().getBlockRange;
-    if (block > tm.getEndBlock) {
-      true
-    } else if (block < tm.getStartBlock) {
+    if (block > tm.getEndBlock || block < tm.getStartBlock) {
+      log.debug("checkMiner:False,block too large:" + block + ",[" + tm.getStartBlock + "," + tm.getEndBlock + "],sign="
+        + termMiner.getSign + ",TID=" + termMiner.getTermId)
       false
     } else {
       val blkshouldMineMS = (block - tm.getStartBlock + 1) * tm.getEachBlockSec * 1000 + termMiner().getTermStartMs
@@ -245,7 +262,7 @@ object DCtrl extends LogHelper {
       Some(termMiner().getMinerQueue(block - tm.getStartBlock)
         .getMinerCoaddr)
     } else if (block > tm.getStartBlock && termMiner().getMinerQueueCount > 0) {
-      Some(termMiner().getMinerQueue(block - tm.getStartBlock
+      Some(termMiner().getMinerQueue((block - tm.getStartBlock)
         % termMiner().getMinerQueueCount)
         .getMinerCoaddr)
     } else {

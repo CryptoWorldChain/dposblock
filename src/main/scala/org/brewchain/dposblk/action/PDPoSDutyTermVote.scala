@@ -25,6 +25,7 @@ import org.apache.commons.lang3.StringUtils
 import org.fc.brewchain.bcapi.exception.FBSException
 import org.brewchain.dposblk.pbgens.Dposblock.PDutyTermResult.VoteResult
 import org.brewchain.dposblk.tasks.BlockSync
+import org.brewchain.dposblk.tasks.DTask_DutyTermVote
 
 @NActorProvider
 @Instantiate
@@ -54,7 +55,7 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
         ret.setRetCode(0).setRetMessage("SUCCESS")
         val vq = DCtrl.voteRequest();
         //
-        this.synchronized({
+       DTask_DutyTermVote.synchronized({
           if ((StringUtils.isBlank(cn.getDutyUid) || cn.getDutyUid.equals(pbo.getLastTermUid))
             //&& (StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
             && (vq.getTermId <= pbo.getLastTermId) && vq.getTermId < pbo.getTermId 
@@ -96,6 +97,7 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
             ret.setVoteAddress(cn.getCoAddress)
             //
           }
+          DTask_DutyTermVote.notifyAll()
         })
         net.dwallMessage("DTRDOB", Left(ret.build()), pbo.getMessageId);
         //        }
@@ -112,6 +114,7 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
         }
       } finally {
         handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
+        
       }
     }
   }

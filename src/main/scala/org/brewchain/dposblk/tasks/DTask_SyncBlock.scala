@@ -56,8 +56,12 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
               //            if (realmap.size() == endIdx - startIdx + 1) {
               log.debug("realBlockCount=" + realmap.size);
               realmap.map { b =>
-                log.debug("get bock height=" + b.getBlockHeight);
                 val acceptedHeight = DCtrl.saveBlock(b);
+                if(acceptedHeight == b.getBlockHeight){
+                  log.debug("sync block height ok=" + b.getBlockHeight+",dbh="+acceptedHeight);
+                }else{
+                  log.debug("sync block height failed=" + b.getBlockHeight+",dbh="+acceptedHeight);
+                }
                 if (acceptedHeight > maxid) {
                   maxid = acceptedHeight;
                 }

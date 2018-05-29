@@ -68,13 +68,14 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
             + pbo.getBcuid,
           OValue.newBuilder()
             .setCount(pbo.getTermId)
-            .setSecondKey("D" + pbo.getTermId + "-" + pbo.getSign)
+            .setSecondKey("D" + pbo.getTermId)
             .setExtdata(pbo.toByteString())
-            .setInfo(pbo.getVoteAddress)
+            .setInfo(pbo.getSign)
             .setNonce(pbo.getResultValue).build())
-        log.debug("Get  DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
+        log.debug("Get DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
           + ",sign=" + pbo.getSign + ",VA=" + pbo.getVoteAddress + ",Result=" + pbo.getResult);
-        DTask_DutyTermVote.synchronized({ DTask_DutyTermVote.notifyAll() })
+        DTask_DutyTermVote.synchronized({
+          DTask_DutyTermVote.notifyAll() })
         //
         //          }
         //        })
