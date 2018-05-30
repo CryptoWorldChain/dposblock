@@ -53,7 +53,10 @@ object DTask_DutyTermVote extends LogHelper {
       + ",N=" + vq.getCoNodes
       + ",dbsize=" +
       records.get.size())
-    if ((records.get.size() + 1) >= DCtrl.voteRequest().getCoNodes * DConfig.VOTE_QUORUM_RATIO / 100) {
+    if (records.get.size() == 0) {
+      DCtrl.voteRequest().clear()
+      false
+    } else if ((records.get.size() + 1) >= vq.getCoNodes * DConfig.VOTE_QUORUM_RATIO / 100) {
       log.debug("try to vote:" + records.get.size());
       val reclist: Buffer[PDutyTermResult.Builder] = records.get.map { p =>
         PDutyTermResult.newBuilder().mergeFrom(p.getValue.getExtdata);
@@ -131,8 +134,8 @@ object DTask_DutyTermVote extends LogHelper {
       }
       if (banForLocal) sleepToNextVote();
       hasConverge
-
     } else {
+
       log.debug("check status Not enough results:B[=" + vq.getBlockRange.getStartBlock + ","
         + vq.getBlockRange.getEndBlock + "],T="
         + vq.getTermId
