@@ -40,38 +40,41 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
       network.sendMessage("SYNDOB", sync, n, new CallBack[FramePacket] {
         def onSuccess(fp: FramePacket) = {
           val end = System.currentTimeMillis();
-
           MDCSetBCUID(DCtrl.dposNet());
           MDCSetMessageID(messageid)
           try {
-            val ret = PRetSyncBlocks.newBuilder().mergeFrom(fp.getBody);
+            if (fp.getBody == null) {
+              //sync Error.
+              log.debug("send SYNDOB error:to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx + ",ret=null")
+            } else {
+              val ret = PRetSyncBlocks.newBuilder().mergeFrom(fp.getBody);
+              log.debug("send SYNDOB success:to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx + ",ret=" +
+                ret.getRetCode + ",count=" + ret.getBlockHeadersCount)
 
-            log.debug("send SYNDOB success:to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx + ",ret=" +
-              ret.getRetCode + ",count=" + ret.getBlockHeadersCount)
+              if (ret.getRetCode() == 0) { //same message
 
-            if (ret.getRetCode() == 0) { //same message
-
-              var maxid: Int = 0
-              val realmap = ret.getBlockHeadersList.filter { p => p.getBlockHeight >= startIdx && p.getBlockHeight <= endIdx }
-              //            if (realmap.size() == endIdx - startIdx + 1) {
-              log.debug("realBlockCount=" + realmap.size);
-              realmap.map { b =>
-                val acceptedHeight = DCtrl.saveBlock(b);
-                if(acceptedHeight == b.getBlockHeight){
-                  log.debug("sync block height ok=" + b.getBlockHeight+",dbh="+acceptedHeight);
-                }else{
-                  log.debug("sync block height failed=" + b.getBlockHeight+",dbh="+acceptedHeight);
+                var maxid: Int = 0
+                val realmap = ret.getBlockHeadersList.filter { p => p.getBlockHeight >= startIdx && p.getBlockHeight <= endIdx }
+                //            if (realmap.size() == endIdx - startIdx + 1) {
+                log.debug("realBlockCount=" + realmap.size);
+                realmap.map { b =>
+                  val acceptedHeight = DCtrl.saveBlock(b);
+                  if (acceptedHeight == b.getBlockHeight) {
+                    log.debug("sync block height ok=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
+                  } else {
+                    log.debug("sync block height failed=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
+                  }
+                  if (acceptedHeight > maxid) {
+                    maxid = acceptedHeight;
+                  }
                 }
-                if (acceptedHeight > maxid) {
-                  maxid = acceptedHeight;
-                }
+                DCtrl.instance.updateBlockHeight(maxid)
+                //!! DCtrl.instance.updateLastApplidId(maxid);
+                //            } else {
+                //              log.warn("cannot get enough entries:wanted:" + startIdx + "-->" + endIdx + ",returnsize=" +
+                //                ret.getEntriesList.size() + ",after Filter=" + realmap.size);
+                //            }
               }
-              DCtrl.instance.updateBlockHeight(maxid)
-              //!! DCtrl.instance.updateLastApplidId(maxid);
-              //            } else {
-              //              log.warn("cannot get enough entries:wanted:" + startIdx + "-->" + endIdx + ",returnsize=" +
-              //                ret.getEntriesList.size() + ",after Filter=" + realmap.size);
-              //            }
             }
           } catch {
             case t: Throwable =>
