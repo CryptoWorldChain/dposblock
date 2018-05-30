@@ -118,7 +118,7 @@ object DTask_DutyTermVote extends LogHelper {
               clearRecords(votelist);
               false
             case a @ _ =>
-              clearRecords(votelist);
+//              clearRecords(votelist);
               false
           }
           if (result) {
@@ -132,7 +132,7 @@ object DTask_DutyTermVote extends LogHelper {
           clearRecords(votelist);
         }
       }
-      if (banForLocal) sleepToNextVote();
+      if (!hasConverge&&banForLocal) sleepToNextVote();
       hasConverge
     } else {
 

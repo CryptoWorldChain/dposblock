@@ -35,8 +35,8 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
 
   def updateVoteReq(pbo: PSDutyTermVote): Unit = {
     vote_Request = pbo.toBuilder()
-    cur_dnode.setNodeCount(vote_Request.getCoNodes)
-    syncToDB();
+//    cur_dnode.setNodeCount(vote_Request.getCoNodes)
+//    syncToDB();
   }
 
   def saveVoteReq(pbo: PSDutyTermVote): Unit = {
