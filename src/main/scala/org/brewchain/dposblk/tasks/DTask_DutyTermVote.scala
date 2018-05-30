@@ -148,15 +148,16 @@ object DTask_DutyTermVote extends LogHelper {
   def runOnce(implicit network: Network): Boolean = {
     Thread.currentThread().setName("RTask_RequestVote");
     DTask_DutyTermVote.synchronized({
-
       val cn = DCtrl.curDN();
       val tm = DCtrl.termMiner();
       val vq = DCtrl.voteRequest()
+      log.debug("dutyvote:vq.tid="+vq.getTermId+","+vq.getBlockRange.getStartBlock+","+vq.getBlockRange.getEndBlock+"]"
+          +",vq.lasttermuid="+vq.getLastTermUid+",tm.termid="+vq.getTermId)
       if (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         && vq.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock
         && vq.getBlockRange.getStartBlock >= cn.getCurBlock
         && vq.getTermId > 0
-        || (StringUtils.isNotBlank(vq.getLastTermUid) && vq.getLastTermUid.equals(tm.getMessageId))) {
+        || (StringUtils.isNotBlank(vq.getLastTermUid) && vq.getLastTermId.equals(tm.getTermId))) {
         checkVoteDB(vq)
       } else if (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         || JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) > DConfig.DTV_TIMEOUT_SEC) {
