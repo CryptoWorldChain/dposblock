@@ -20,22 +20,29 @@ import org.apache.commons.lang3.StringUtils
 import org.brewchain.bcapi.gens.Oentity.OPair
 import java.util.concurrent.Future
 import org.fc.brewchain.p22p.core.Votes.NotConverge
+import scala.collection.mutable.Map
+import org.brewchain.bcapi.gens.Oentity.OKey
+import com.google.protobuf.ByteString
 
 //获取其他节点的term和logidx，commitidx
 object DTask_DutyTermVote extends LogHelper {
 
-  def sleepToNextVote(records: Future[java.util.List[OPair]], vq: PSDutyTermVote.Builder): Unit = {
+  def sleepToNextVote(): Unit = {
     val ban_sec = (Math.abs(Math.random() * 100000 % (DConfig.BAN_MAXSEC_FOR_VOTE_REJECT - DConfig.BAN_MINSEC_FOR_VOTE_REJECT)) +
       DConfig.BAN_MINSEC_FOR_VOTE_REJECT).asInstanceOf[Long]
     //    log.debug("Undecisible but not converge.ban sleep=" + ban_sec)
-    if (System.currentTimeMillis() - vq.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
-      //      log.debug("remove undecisible vote for timeout:" + (System.currentTimeMillis() - vq.getTermStartMs));
-      Daos.dposdb.batchDelete(records.get.map { p => p.getKey }.toArray)
-      vq.clear();
-    }
+    log.debug("ban for vote sleep:" + ban_sec + " seconds");
     DTask_DutyTermVote.synchronized({
       DTask_DutyTermVote.wait(ban_sec * 1000)
     })
+  }
+  def clearRecords(votelist: Buffer[PDutyTermResult.Builder]): Unit = {
+    Daos.dposdb.batchDelete(votelist.map { p =>
+      OKey.newBuilder().setData(
+        ByteString.copyFromUtf8(
+          "V" + p.getTermId + "-" + p.getSign + "-"
+            + p.getBcuid)).build()
+    }.toArray)
   }
   def checkVoteDB(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
     val records = Daos.dposdb.listBySecondKey("D" + vq.getTermId)
@@ -59,51 +66,72 @@ object DTask_DutyTermVote extends LogHelper {
         + ",N=" + vq.getCoNodes
         + ",dbsize=" + records.get.size()
         + ",realsize=" + realist.size())
-      Votes.vote(realist).PBFTVote({ p =>
-        if (p.getSign.equals(vq.getSign)) {
-          Some(p.getResult)
-        }
-        else{
-          None
-        }
-      }, vq.getCoNodes) match {
-        case Converge(n) =>
-          //          log.debug("converge:" + n);
-          if (n == VoteResult.VR_GRANTED) {
-            log.debug("Vote Granted will be the new terms:T="
-              + vq.getTermId
-              + ",sign=" + vq.getSign
-              + ",N=" + vq.getCoNodes + ":"
-              + vq.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr));
-            DCtrl.instance.term_Miner = vq.clone()
-            DCtrl.instance.updateTerm()
-            true
-          } else if (n == VoteResult.VR_REJECT) {
-            sleepToNextVote(records, vq)
-            //              RSM.resetVoteRequest();
-            false
-          } else {
-            sleepToNextVote(records, vq)
-            //              RSM.resetVoteRequest();
-            false
+      val signmap = Map[String, Buffer[PDutyTermResult.Builder]]();
+      realist.map { x =>
+        val buff = signmap.get(x.getSign) match {
+          case Some(_buffn) => _buffn
+          case None => {
+            val r = Buffer[PDutyTermResult.Builder]();
+            signmap.put(x.getSign, r)
+            r
           }
-        case n: Undecisible =>
-          if (records.get.size() >= DCtrl.termMiner().getCoNodes - 1) {
-            sleepToNextVote(records, vq)
-            //          !!    RSM.resetVoteRequest();
-          } else {
-            log.debug("cannot decide vote state, wait other response")
-          }
-          false
-        case n: NotConverge =>
-          sleepToNextVote(records, vq)
-          false
-        case a @ _ =>
-          log.debug("not converge,try next time:::" + a)
-          sleepToNextVote(records, vq)
-          //            RSM.resetVoteRequest();
-          false
+        }
+        buff.append(x)
+
       }
+      var hasConverge = false;
+      var banForLocal = false;
+      signmap.map { kv =>
+        val sign = kv._1
+        val votelist = kv._2
+        val dbtempvote = DCtrl.instance.loadVoteReq(sign);
+        log.debug("dbtempvote=" + dbtempvote.getSign + ",sign=" + sign + ",size=" + votelist.size);
+        if (!hasConverge && StringUtils.equals(dbtempvote.getSign, sign)) {
+          val result = Votes.vote(votelist).PBFTVote({ p =>
+            Some(p.getResult)
+          }, dbtempvote.getCoNodes) match {
+            case Converge(n) =>
+              //          log.debug("converge:" + n);
+              if (n == VoteResult.VR_GRANTED) {
+                log.debug("Vote Granted will be the new terms:T="
+                  + dbtempvote.getTermId
+                  + ",sign=" + dbtempvote.getSign
+                  + ",N=" + dbtempvote.getCoNodes + ":"
+                  + dbtempvote.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr));
+                DCtrl.instance.term_Miner = dbtempvote
+                DCtrl.instance.updateTerm()
+                hasConverge = true;
+                true
+              } else if (n == VoteResult.VR_REJECT) {
+                clearRecords(votelist);
+                false
+              } else {
+                clearRecords(votelist);
+                false
+              }
+            case n: Undecisible =>
+              false
+            case n: NotConverge =>
+              clearRecords(votelist);
+              false
+            case a @ _ =>
+              clearRecords(votelist);
+              false
+          }
+          if (result) {
+            hasConverge = result
+          } else {
+            if (!banForLocal || StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
+              banForLocal = true;
+            }
+          }
+        } else { //unclean data
+          clearRecords(votelist);
+        }
+      }
+      if (banForLocal) sleepToNextVote();
+      hasConverge
+
     } else {
       log.debug("check status Not enough results:B[=" + vq.getBlockRange.getStartBlock + ","
         + vq.getBlockRange.getEndBlock + "],T="

@@ -97,7 +97,9 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
             ret.setVoteAddress(cn.getCoAddress)
             //
           }
+          DCtrl.instance.saveVoteReq(pbo);
           DTask_DutyTermVote.notifyAll()
+          
         })
         net.dwallMessage("DTRDOB", Left(ret.build()), pbo.getMessageId);
         //        }

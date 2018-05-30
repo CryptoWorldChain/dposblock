@@ -38,6 +38,20 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
     cur_dnode.setNodeCount(vote_Request.getCoNodes)
     syncToDB();
   }
+
+  def saveVoteReq(pbo: PSDutyTermVote): Unit = {
+    Daos.dposdb.put("TERM-TEMP-"+pbo.getSign,
+      OValue.newBuilder().setExtdata(pbo.toByteString()).build())
+  }
+  
+  def loadVoteReq(sign:String):PSDutyTermVote.Builder = {
+    val ov = Daos.dposdb.get("TERM-TEMP-"+sign).get
+    if(ov!=null){
+      PSDutyTermVote.newBuilder().mergeFrom(ov.getExtdata)
+    }else{
+      PSDutyTermVote.newBuilder()
+    }
+  }
   def loadNodeFromDB(): PDNode.Builder = {
     val ov = Daos.dposdb.get(DPOS_NODE_DB_KEY).get
     val root_node = network.root();
@@ -140,8 +154,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
               }
               continue = true;
               cur_dnode.setState(DNodeState.DN_CO_MINER);
-            }else
-            if (DTask_MineBlock.runOnce) {
+            } else if (DTask_MineBlock.runOnce) {
               if (cur_dnode.getCurBlock >= DCtrl.voteRequest().getBlockRange.getEndBlock
                 || term_Miner.getTermId < vote_Request.getTermId) {
                 val sleept = Math.abs((Math.random() * 100000000 % DConfig.DTV_TIME_MS_EACH_BLOCK).asInstanceOf[Long]) + 10;
