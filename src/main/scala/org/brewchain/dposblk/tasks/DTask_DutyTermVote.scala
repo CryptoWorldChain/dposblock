@@ -94,7 +94,7 @@ object DTask_DutyTermVote extends LogHelper {
             Some(p.getResult)
           }, dbtempvote.getCoNodes) match {
             case Converge(n) =>
-              //          log.debug("converge:" + n);
+              //          log.debug("converge:" + n); 
               if (n == VoteResult.VR_GRANTED) {
                 log.debug("Vote Granted will be the new terms:T="
                   + dbtempvote.getTermId
@@ -118,7 +118,7 @@ object DTask_DutyTermVote extends LogHelper {
               clearRecords(votelist);
               false
             case a @ _ =>
-//              clearRecords(votelist);
+              //              clearRecords(votelist);
               false
           }
           if (result) {
@@ -132,7 +132,10 @@ object DTask_DutyTermVote extends LogHelper {
           clearRecords(votelist);
         }
       }
-      if (!hasConverge&&banForLocal) sleepToNextVote();
+      if (!hasConverge && banForLocal) {
+        DCtrl.voteRequest().clear()
+        sleepToNextVote();
+      }
       hasConverge
     } else {
 
@@ -151,8 +154,8 @@ object DTask_DutyTermVote extends LogHelper {
       val cn = DCtrl.curDN();
       val tm = DCtrl.termMiner();
       val vq = DCtrl.voteRequest()
-      log.debug("dutyvote:vq.tid="+vq.getTermId+","+vq.getBlockRange.getStartBlock+","+vq.getBlockRange.getEndBlock+"]"
-          +",vq.lasttermuid="+vq.getLastTermUid+",tm.termid="+vq.getTermId)
+      log.debug("dutyvote:vq.tid=" + vq.getTermId + "," + vq.getBlockRange.getStartBlock + "," + vq.getBlockRange.getEndBlock + "]"
+        + ",vq.lasttermuid=" + vq.getLastTermUid + ",tm.termid=" + vq.getTermId)
       if (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         && vq.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock
         && vq.getBlockRange.getStartBlock >= cn.getCurBlock

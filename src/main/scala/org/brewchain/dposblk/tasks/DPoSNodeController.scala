@@ -114,8 +114,9 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
         continue = false;
         log.info("DCTRL.RunOnce:S=" + cur_dnode.getState + ",B=" + cur_dnode.getCurBlock
           + ",CA=" + cur_dnode.getCoAddress
-          + ",N=" + cur_dnode.getNodeCount
+          + ",N=" + DCtrl.coMinerByUID.size
           + ",RN=" + network.bitenc.bits.bitCount
+          + ",CN=" + term_Miner.getCoNodes
           + ",TN=" + cur_dnode.getTxcount + ",DU=" + cur_dnode.getDutyUid
           + ",VT=" + vote_Request.getTermId
           + ",TM=" + term_Miner.getTermId
@@ -135,7 +136,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
                 false
               case x @ _ =>
                 log.debug("not ready");
-                false
+                false 
             }
           case DNodeState.DN_CO_MINER =>
             if (DTask_DutyTermVote.runOnce) {

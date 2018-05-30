@@ -54,7 +54,7 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
         ret.setMessageId(pbo.getMessageId);
         ret.setRetCode(0).setRetMessage("SUCCESS")
         val cn = DCtrl.curDN()
-        val vq = DCtrl.voteRequest();
+//        val vq = DCtrl.voteRequest();
         //
         //        this.synchronized({
         //          if ((StringUtils.isNotBlank(cn.getDutyUid))
