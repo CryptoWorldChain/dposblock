@@ -46,13 +46,13 @@ object DTask_DutyTermVote extends LogHelper {
   }
   def checkVoteDB(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
     val records = Daos.dposdb.listBySecondKey("D" + vq.getTermId)
-    log.debug("check db status:B[=" + vq.getBlockRange.getStartBlock + ","
-      + vq.getBlockRange.getEndBlock + "],T="
-      + vq.getTermId
-      + ",sign=" + vq.getSign
-      + ",N=" + vq.getCoNodes
-      + ",dbsize=" +
-      records.get.size())
+    //    log.debug("check db status:B[=" + vq.getBlockRange.getStartBlock + ","
+    //      + vq.getBlockRange.getEndBlock + "],T="
+    //      + vq.getTermId
+    //      + ",sign=" + vq.getSign
+    //      + ",N=" + vq.getCoNodes
+    //      + ",dbsize=" +
+    //      records.get.size())
     if (records.get.size() == 0) {
       DCtrl.voteRequest().clear()
       false
@@ -107,15 +107,25 @@ object DTask_DutyTermVote extends LogHelper {
                 true
               } else if (n == VoteResult.VR_REJECT) {
                 clearRecords(votelist);
+                if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
+                  banForLocal = true;
+                }
                 false
               } else {
                 clearRecords(votelist);
+                if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
+                  banForLocal = true;
+                }
                 false
               }
             case n: Undecisible =>
+              log.debug("Undecisible:dbsize=" + votelist + ",N=" + dbtempvote.getCoNodes);
               false
             case n: NotConverge =>
               clearRecords(votelist);
+              if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
+                banForLocal = true;
+              }
               false
             case a @ _ =>
               //              clearRecords(votelist);
@@ -123,10 +133,6 @@ object DTask_DutyTermVote extends LogHelper {
           }
           if (result) {
             hasConverge = result
-          } else {
-            if (!banForLocal || StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
-              banForLocal = true;
-            }
           }
         } else { //unclean data
           clearRecords(votelist);
