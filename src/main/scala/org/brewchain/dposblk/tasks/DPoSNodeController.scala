@@ -297,8 +297,10 @@ object DCtrl extends LogHelper {
       } else {
         res.getCurrentNumber
       }
+    }else
+    {
+      b.getBlockHeight
     }
-    b.getBlockHeight
   }
 
   def loadFromBlock(block: Int): PBlockEntry.Builder = {
