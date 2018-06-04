@@ -65,7 +65,7 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
                 + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
                 + ",B=" + cn.getCurBlock + ",BS=[" + pbo.getBlockRange.getStartBlock+"," + pbo.getBlockRange.getEndBlock
                 + "],VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid
-                + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress);
+                + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress+",from="+pbo.getBcuid);
               ret.setResult(VoteResult.VR_GRANTED)
               ret.setTermId(pbo.getTermId)
               ret.setSign(pbo.getSign)

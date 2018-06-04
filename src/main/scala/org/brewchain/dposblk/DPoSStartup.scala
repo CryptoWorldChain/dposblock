@@ -39,7 +39,7 @@ class DPoSStartup extends PSMDPoSNet[Message] {
 
 }
 
-class DPoSBGLoader() extends Runnable  with LogHelper {
+class DPoSBGLoader() extends Runnable with LogHelper {
   def run() = {
     URLHelper.init();
     while (!Daos.isDbReady() //        || MessageSender.sockSender.isInstanceOf[NonePackSender]
@@ -59,14 +59,25 @@ class DPoSBGLoader() extends Runnable  with LogHelper {
       log.debug("dposnet not ready. dposnet=" + dposnet)
       Thread.sleep(5000);
     }
-    log.debug("dposnet.initOK:My Node=" + dposnet.root()) // my node
     //    RSM.instance = RaftStateManager(raftnet);
+
+    //     Daos.actdb.getNodeAccount();
+    Daos.actdb.onStart(dposnet.root().bcuid, dposnet.root().v_address, dposnet.root().name)
+
+    while (Daos.actdb.getNodeAccount == null) {
+      log.debug("dpos cws account not ready. ")
+      Thread.sleep(5000);
+    }
+    val naccount = Daos.actdb.getNodeAccount;
+    
+    dposnet.changeNodeVAddr(naccount);
+    log.debug("dposnet.initOK:My Node=" + dposnet.root() + ",CoAddr=" + dposnet.root().v_address) // my node
 
     DCtrl.instance = DPosNodeController(dposnet);
     Scheduler.scheduleWithFixedDelay(DCtrl.instance, DConfig.INITDELAY_DCTRL_SEC,
-      DConfig.TICK_DCTRL_SEC, TimeUnit.SECONDS)
+      Math.min(DConfig.TICK_DCTRL_MS,DConfig.BLK_EPOCH_MS)
+      , TimeUnit.MILLISECONDS)
 
-    Daos.actdb.onStart(dposnet.root().bcuid, dposnet.root().v_address, dposnet.root().name)
     //    Daos
     //    Scheduler.scheduleWithFixedDelay(RSM.instance, RConfig.INITDELAY_RSM_SEC,
     //      RConfig.TICK_RSM_SEC, TimeUnit.SECONDS)

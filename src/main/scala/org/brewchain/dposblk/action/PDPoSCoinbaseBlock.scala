@@ -61,10 +61,12 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
               DCtrl.saveBlock(pbo.getBlockEntry) match {
                 case n if n > 0 && n < pbo.getBlockHeight =>
                   ret.setResult(CoinbaseResult.CR_PROVEN)
-                  log.info("newblock:failed,H=" + pbo.getBlockHeight + ",DBH=" + n + ":coadrr=" + pbo.getCoAddress);
+                  log.info("newblock:failed,H=" + pbo.getBlockHeight + ",DBH=" + n + ":coadrr=" + pbo.getCoAddress+",MN="+DCtrl.coMinerByUID
+                      .size+",DN="+DCtrl.dposNet().directNodeByIdx.size+",PN="+DCtrl.dposNet().pendingNodeByBcuid.size);
                   BlockSync.tryBackgroundSyncLogs(pbo.getBlockHeight, pbo.getCoAddress)(DCtrl.dposNet())
                 case n if n > 0 =>
-                  log.info("newblock:ok,H=" + pbo.getBlockHeight + ",DBH=" + n + ":coadrr=" + pbo.getCoAddress)
+                  log.info("newblock:ok,H=" + pbo.getBlockHeight + ",DBH=" + n + ":coadrr=" + pbo.getCoAddress+",MN="+DCtrl.coMinerByUID
+                      .size+",DN="+DCtrl.dposNet().directNodeByIdx.size+",PN="+DCtrl.dposNet().pendingNodeByBcuid.size)
                   ret.setResult(CoinbaseResult.CR_PROVEN)
                 case _ =>
                   ret.setResult(CoinbaseResult.CR_REJECT)

@@ -23,6 +23,8 @@ import org.brewchain.dposblk.Daos
 import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntry
 import org.brewchain.account.util.ByteUtil
 import org.apache.commons.codec.binary.Base64
+import com.googlecode.protobuf.format.util.HexUtils
+import org.apache.commons.codec.binary.Hex
 
 //获取其他节点的term和logidx，commitidx
 object DTask_MineBlock extends LogHelper with BitMap {
@@ -33,7 +35,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
       val cn = DCtrl.instance.cur_dnode;
       val curtime = System.currentTimeMillis();
       if (DCtrl.checkMiner(cn.getCurBlock + 1, cn.getCoAddress, curtime,
-        DConfig.BLK_EPOCH_SEC * 1000)) {
+        DConfig.BLK_EPOCH_MS)) {
         MDCSetBCUID(network)
         val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock,
           ByteUtil.EMPTY_BYTE_ARRAY, ByteUtil.EMPTY_BYTE_ARRAY);
@@ -44,8 +46,8 @@ object DTask_MineBlock extends LogHelper with BitMap {
         } else {
           //        log.debug("MineNewBlock:" + newblk);
           log.debug("mining check ok :new block=" + newblockheight + ",CO=" + cn.getCoAddress
-            + ",MaxTnx=" + DCtrl.termMiner().getMaxTnxEachBlock + ",hash=" + newblk.getHeader.getBlockHash);
-
+            + ",MaxTnx=" + DCtrl.termMiner().getMaxTnxEachBlock + ",hash=" + 
+            Hex.encodeHexString(newblk.getHeader.getBlockHash.toByteArray()));
           val newCoinbase = PSCoinbase.newBuilder()
             .setBlockHeight(newblockheight).setCoAddress(cn.getCoAddress)
             .setTermId(DCtrl.termMiner().getTermId)

@@ -35,20 +35,20 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
 
   def updateVoteReq(pbo: PSDutyTermVote): Unit = {
     vote_Request = pbo.toBuilder()
-//    cur_dnode.setNodeCount(vote_Request.getCoNodes)
-//    syncToDB();
+    //    cur_dnode.setNodeCount(vote_Request.getCoNodes)
+    //    syncToDB();
   }
 
   def saveVoteReq(pbo: PSDutyTermVote): Unit = {
-    Daos.dposdb.put("TERM-TEMP-"+pbo.getSign,
+    Daos.dposdb.put("TERM-TEMP-" + pbo.getSign,
       OValue.newBuilder().setExtdata(pbo.toByteString()).build())
   }
-  
-  def loadVoteReq(sign:String):PSDutyTermVote.Builder = {
-    val ov = Daos.dposdb.get("TERM-TEMP-"+sign).get
-    if(ov!=null){
+
+  def loadVoteReq(sign: String): PSDutyTermVote.Builder = {
+    val ov = Daos.dposdb.get("TERM-TEMP-" + sign).get
+    if (ov != null) {
       PSDutyTermVote.newBuilder().mergeFrom(ov.getExtdata)
-    }else{
+    } else {
       PSDutyTermVote.newBuilder()
     }
   }
@@ -131,12 +131,12 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
               case n: PDNode if n == cur_dnode =>
                 log.debug("dpos cominer init ok:" + n);
                 true;
-              case n: PDNode if n != cur_dnode =>
+              case n: PDNode if !n.equals(cur_dnode) =>
                 log.debug("dpos waiting for init:" + n);
                 false
               case x @ _ =>
                 log.debug("not ready");
-                false 
+                false
             }
           case DNodeState.DN_CO_MINER =>
             if (DTask_DutyTermVote.runOnce) {
@@ -183,8 +183,10 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
                   DTask_DutyTermVote.wait(sleept)
                 });
                 true
-              } else {
-                false
+              } else if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock) {
+                cur_dnode.setState(DNodeState.DN_CO_MINER);
+                continue = true;
+                true;
               }
             }
           case DNodeState.DN_SYNC_BLOCK =>
@@ -229,14 +231,15 @@ object DCtrl extends LogHelper {
         + termMiner.getSign + ",TID=" + termMiner.getTermId)
       false
     } else {
-      val blkshouldMineMS = (block - tm.getStartBlock + 1) * tm.getEachBlockSec * 1000 + termMiner().getTermStartMs
+      val blkshouldMineMS = (block - tm.getStartBlock + 1) * tm.getEachBlockMs + termMiner().getTermStartMs
       val realblkMineMS = mineTime;
       val termblockLeft = block - tm.getEndBlock
       minerByBlockHeight(block) match {
         case Some(n) =>
           if (coaddr.equals(n)) {
             if (realblkMineMS < blkshouldMineMS) {
-              log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockSec + ",TermLeft=" + termblockLeft);
+              log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockMS=" + tm.getEachBlockMs + ",TermLeft=" + termblockLeft
+                + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign);
               Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
             }
             true
@@ -245,10 +248,12 @@ object DCtrl extends LogHelper {
               minerByBlockHeight(block + ((realblkMineMS - blkshouldMineMS) / DConfig.MAX_WAIT_BLK_EPOCH_MS).asInstanceOf[Int]) match {
                 case Some(nn) =>
                   log.debug("Override miner for Next:check:" + blkshouldMineMS + ",realblkmine=" + realblkMineMS + ",n=" + n
-                    + ",next=" + nn + ",coaddr=" + coaddr + ",blocknext=" + (block + 1) + ",TermLeft=" + termblockLeft + ",Result=" + coaddr.equals(nn));
+                    + ",next=" + nn + ",coaddr=" + coaddr + ",blocknext=" + (block + 1) + ",TermLeft=" + termblockLeft + ",Result=" + coaddr.equals(nn)
+                    + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign);
                   coaddr.equals(nn)
                 case None =>
-                  log.debug("wait for Miner:Should=" + blkshouldMineMS + ",Real=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockSec + ",TermLeft=" + termblockLeft);
+                  log.debug("wait for Miner:Should=" + blkshouldMineMS + ",Real=" + realblkMineMS + ",eachBlockMS=" + tm.getEachBlockMs + ",TermLeft=" + termblockLeft
+                    + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign);
                   false
               }
             } else {
@@ -284,13 +289,16 @@ object DCtrl extends LogHelper {
     }
   }
   def saveBlock(b: PBlockEntryOrBuilder): Int = {
-    val res = Daos.blkHelper.ApplyBlock(b.getBlockHeader);
-    if (res.getCurrentNumber > 0) {
-      DCtrl.instance.updateBlockHeight(res.getCurrentNumber)
-      res.getCurrentNumber
-    } else {
-      res.getCurrentNumber
+    if (!b.getCoinbaseBcuid.equals(DCtrl.curDN().getBcuid)) {
+      val res = Daos.blkHelper.ApplyBlock(b.getBlockHeader);
+      if (res.getCurrentNumber > 0) {
+        DCtrl.instance.updateBlockHeight(res.getCurrentNumber)
+        res.getCurrentNumber
+      } else {
+        res.getCurrentNumber
+      }
     }
+    b.getBlockHeight
   }
 
   def loadFromBlock(block: Int): PBlockEntry.Builder = {

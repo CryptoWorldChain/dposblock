@@ -27,14 +27,16 @@ import com.google.protobuf.ByteString
 //获取其他节点的term和logidx，commitidx
 object DTask_DutyTermVote extends LogHelper {
 
+  var ban_for_vote_sec = 0L;
   def sleepToNextVote(): Unit = {
     val ban_sec = (Math.abs(Math.random() * 100000 % (DConfig.BAN_MAXSEC_FOR_VOTE_REJECT - DConfig.BAN_MINSEC_FOR_VOTE_REJECT)) +
       DConfig.BAN_MINSEC_FOR_VOTE_REJECT).asInstanceOf[Long]
     //    log.debug("Undecisible but not converge.ban sleep=" + ban_sec)
     log.debug("ban for vote sleep:" + ban_sec + " seconds");
-    DTask_DutyTermVote.synchronized({
-      DTask_DutyTermVote.wait(ban_sec * 1000)
-    })
+    ban_for_vote_sec = System.currentTimeMillis() + ban_sec * 1000;
+    //DTask_DutyTermVote.synchronized({
+    //      DTask_DutyTermVote.wait(ban_sec * 1000)
+    //    })
   }
   def clearRecords(votelist: Buffer[PDutyTermResult.Builder]): Unit = {
     Daos.dposdb.batchDelete(votelist.map { p =>
@@ -57,7 +59,7 @@ object DTask_DutyTermVote extends LogHelper {
       DCtrl.voteRequest().clear()
       false
     } else if ((records.get.size() + 1) >= vq.getCoNodes * DConfig.VOTE_QUORUM_RATIO / 100) {
-      log.debug("try to vote:" + records.get.size());
+//      log.debug("try to vote:" + records.get.size());
       val reclist: Buffer[PDutyTermResult.Builder] = records.get.map { p =>
         PDutyTermResult.newBuilder().mergeFrom(p.getValue.getExtdata);
       };
@@ -120,6 +122,10 @@ object DTask_DutyTermVote extends LogHelper {
               }
             case n: Undecisible =>
               log.debug("Undecisible:dbsize=" + votelist + ",N=" + dbtempvote.getCoNodes);
+              if (System.currentTimeMillis() - dbtempvote.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
+                log.debug("clear timeout vote after:" + JodaTimeHelper.secondFromNow(dbtempvote.getTermStartMs))
+                clearRecords(votelist);
+              }
               false
             case n: NotConverge =>
               clearRecords(votelist);
@@ -168,8 +174,9 @@ object DTask_DutyTermVote extends LogHelper {
         && vq.getTermId > 0
         || (StringUtils.isNotBlank(vq.getLastTermUid) && vq.getLastTermId.equals(tm.getTermId))) {
         checkVoteDB(vq)
-      } else if (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
-        || JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) > DConfig.DTV_TIMEOUT_SEC) {
+      } else if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
+        || JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) > DConfig.DTV_TIMEOUT_SEC)
+        && System.currentTimeMillis() > ban_for_vote_sec) {
 
         val msgid = UUIDGenerator.generate();
         MDCSetMessageID(msgid);
@@ -189,13 +196,14 @@ object DTask_DutyTermVote extends LogHelper {
         newterm.setBlockRange(BlockRange.newBuilder()
           .setStartBlock(startBlk)
           .setEndBlock(startBlk + mineBlockCount - 1)
-          .setEachBlockSec(DConfig.BLK_EPOCH_SEC))
+          .setEachBlockMs(DConfig.BLK_EPOCH_MS))
           .setCoNodes(conodescount)
           .setMessageId(msgid)
           .setCoAddress(DCtrl.instance.cur_dnode.getCoAddress)
           .setCwsGuaranty(DConfig.MAX_CWS_GUARANTY)
           .setSliceId(1)
           .setMaxTnxEachBlock(DConfig.MAX_TNX_EACH_BLOCK)
+          .setBcuid(cn.getBcuid)
           .setTermStartMs(System.currentTimeMillis());
 
         newterm.setTermEndMs(DConfig.DTV_TIME_MS_EACH_BLOCK * mineBlockCount);
@@ -221,16 +229,9 @@ object DTask_DutyTermVote extends LogHelper {
             }
           }
         }
-        log.debug("mineQ=" + newterm.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr))
-
-        log.debug("get coMinerNodeCount=" + DCtrl.coMinerByUID.size + ",NetworkDNodecount=" + network.directNodeByBcuid.size);
-
-        //checking health remove offline nodes.
-
-        val curtime = System.currentTimeMillis()
-        DCtrl.instance.vote_Request = newterm;
         log.debug("try to vote:newterm=" + newterm.getTermId + ",curterm=" + tm.getTermId
-          + ",voteN=" + conodescount + ",sign=" + newterm.getSign)
+          + ",voteN=" + conodescount + ",sign=" + newterm.getSign+",mineQ=" + newterm.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr))
+        DCtrl.instance.vote_Request = newterm;
         network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), msgid);
         false
       } else {
