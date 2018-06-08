@@ -58,7 +58,8 @@ object DTask_DutyTermVote extends LogHelper {
     if (records.get.size() == 0) {
       DCtrl.voteRequest().clear()
       false
-    } else if ((records.get.size() + 1) >= vq.getCoNodes * DConfig.VOTE_QUORUM_RATIO / 100) {
+    } else if ((records.get.size() + 1) >= vq.getCoNodes * DConfig.VOTE_QUORUM_RATIO / 100
+        || (System.currentTimeMillis() - vq.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000)) {
 //      log.debug("try to vote:" + records.get.size());
       val reclist: Buffer[PDutyTermResult.Builder] = records.get.map { p =>
         PDutyTermResult.newBuilder().mergeFrom(p.getValue.getExtdata);

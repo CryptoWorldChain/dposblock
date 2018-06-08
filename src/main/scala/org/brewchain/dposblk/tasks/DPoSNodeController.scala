@@ -144,15 +144,9 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
               cur_dnode.setState(DNodeState.DN_DUTY_MINER);
             }
           case DNodeState.DN_DUTY_MINER =>
-            if (cur_dnode.getCurBlock == term_Miner.getBlockRange.getEndBlock) {
-              //
-              if (DCtrl.voteRequest().getLastTermId >= term_Miner.getTermId) {
+            if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock||DCtrl.voteRequest().getLastTermId >= term_Miner.getTermId) {
                 log.debug("cur term force to end:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
                   + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId + ",tid=" + term_Miner.getTermId);
-              } else {
-                log.debug("vq not normal:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
-                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId + ",tid=" + term_Miner.getTermId);
-              }
               continue = true;
               cur_dnode.setState(DNodeState.DN_CO_MINER);
             } else if (DTask_MineBlock.runOnce) {
@@ -239,7 +233,7 @@ object DCtrl extends LogHelper {
           if (coaddr.equals(n)) {
             if (realblkMineMS < blkshouldMineMS) {
               log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockMS=" + tm.getEachBlockMs + ",TermLeft=" + termblockLeft
-                + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign);
+                + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign+",bh="+block);
               Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
             }
             true
