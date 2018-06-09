@@ -261,7 +261,7 @@ object DCtrl extends LogHelper {
               minerByBlockHeight(block + ((realblkMineMS - blkshouldMineMS) / DConfig.MAX_WAIT_BLK_EPOCH_MS).asInstanceOf[Int]) match {
                 case Some(nn) =>
                   log.debug("Override miner for Next:check:" + blkshouldMineMS + ",realblkmine=" + realblkMineMS + ",n=" + n
-                    + ",next=" + nn + ",coaddr=" + coaddr + ",blocknext=" + (block + 1) + ",TermLeft=" + termblockLeft + ",Result=" + coaddr.equals(nn)
+                    + ",next=" + nn + ",coaddr=" + coaddr + ",block=" + (block) + ",TermLeft=" + termblockLeft + ",Result=" + coaddr.equals(nn)
                     + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign);
                   coaddr.equals(nn)
                 case None =>
