@@ -116,7 +116,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
         continue = false;
         log.info("DCTRL.RunOnce:S=" + cur_dnode.getState + ",B=" + cur_dnode.getCurBlock
           + ",CA=" + cur_dnode.getCoAddress
-          + ",N=" + DCtrl.coMinerByUID.size
+          + ",MN=" + DCtrl.coMinerByUID.size
           + ",RN=" + network.bitenc.bits.bitCount
           + ",CN=" + term_Miner.getCoNodes
           + ",TN=" + cur_dnode.getTxcount + ",DU=" + cur_dnode.getDutyUid
@@ -160,7 +160,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
               continue = true;
               cur_dnode.setState(DNodeState.DN_SYNC_BLOCK);
             }else
-            if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock || DCtrl.voteRequest().getLastTermId >= term_Miner.getTermId
+            if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock //|| DCtrl.voteRequest().getLastTermId >= term_Miner.getTermId
               ) {
               log.debug("cur term force to end:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
                 + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId
@@ -169,7 +169,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
               continue = true;
               cur_dnode.setState(DNodeState.DN_CO_MINER);
             } else if (DTask_MineBlock.runOnce) {
-              if (cur_dnode.getCurBlock >= DCtrl.voteRequest().getBlockRange.getEndBlock
+              if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock
                 || term_Miner.getTermId < vote_Request.getTermId) {
                 val sleept = Math.abs((Math.random() * 100000000 % DConfig.DTV_TIME_MS_EACH_BLOCK).asInstanceOf[Long]) + 10;
                 log.debug("cur term WILL end:newblk=" + cur_dnode.getCurBlock + ",term[" + DCtrl.voteRequest().getBlockRange.getStartBlock
@@ -187,7 +187,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
               }
             } else {
               //check who mining.
-              if (cur_dnode.getCurBlock >= DCtrl.voteRequest().getBlockRange.getEndBlock) {
+              if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock) {
                 continue = true;
                 val sleept = Math.abs((Math.random() * 10000000 % DConfig.DTV_TIME_MS_EACH_BLOCK).asInstanceOf[Long]) + 10;
                 cur_dnode.setState(DNodeState.DN_CO_MINER);
@@ -196,10 +196,8 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
                   DTask_DutyTermVote.wait(sleept)
                 });
                 true
-              } else if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock) {
-                cur_dnode.setState(DNodeState.DN_CO_MINER);
-                continue = true;
-                true;
+              }else{
+                false;
               }
             }
           case DNodeState.DN_SYNC_BLOCK =>
