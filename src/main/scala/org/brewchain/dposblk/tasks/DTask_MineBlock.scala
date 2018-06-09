@@ -46,7 +46,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
         } else {
           //        log.debug("MineNewBlock:" + newblk);
           log.debug("mining check ok :new block=" + newblockheight + ",CO=" + cn.getCoAddress
-            + ",MaxTnx=" + DCtrl.termMiner().getMaxTnxEachBlock + ",hash=" + 
+            + ",MaxTnx=" + DCtrl.termMiner().getMaxTnxEachBlock + ",hash=" +
             Hex.encodeHexString(newblk.getHeader.getBlockHash.toByteArray()));
           val newCoinbase = PSCoinbase.newBuilder()
             .setBlockHeight(newblockheight).setCoAddress(cn.getCoAddress)

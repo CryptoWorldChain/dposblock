@@ -59,8 +59,8 @@ object DTask_DutyTermVote extends LogHelper {
       DCtrl.voteRequest().clear()
       false
     } else if ((records.get.size() + 1) >= vq.getCoNodes * DConfig.VOTE_QUORUM_RATIO / 100
-        || (System.currentTimeMillis() - vq.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000)) {
-//      log.debug("try to vote:" + records.get.size());
+      || (System.currentTimeMillis() - vq.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000)) {
+      //      log.debug("try to vote:" + records.get.size());
       val reclist: Buffer[PDutyTermResult.Builder] = records.get.map { p =>
         PDutyTermResult.newBuilder().mergeFrom(p.getValue.getExtdata);
       };
@@ -147,6 +147,7 @@ object DTask_DutyTermVote extends LogHelper {
       }
       if (!hasConverge && banForLocal) {
         DCtrl.voteRequest().clear()
+        DCtrl.curDN().clearDutyUid();
         sleepToNextVote();
       }
       hasConverge
@@ -177,7 +178,10 @@ object DTask_DutyTermVote extends LogHelper {
         checkVoteDB(vq)
       } else if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         || JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) > DConfig.DTV_TIMEOUT_SEC)
-        && System.currentTimeMillis() > ban_for_vote_sec) {
+        && System.currentTimeMillis() > ban_for_vote_sec &&
+        (cn.getCominerStartBlock +
+          Math.min(DConfig.COMINER_WAIT_BLOCKS_TODUTY, (tm.getCoNodes - 1) *
+            DConfig.DTV_MUL_BLOCKS_EACH_TERM) <= cn.getCurBlock)) {
 
         val msgid = UUIDGenerator.generate();
         MDCSetMessageID(msgid);
@@ -231,12 +235,12 @@ object DTask_DutyTermVote extends LogHelper {
           }
         }
         log.debug("try to vote:newterm=" + newterm.getTermId + ",curterm=" + tm.getTermId
-          + ",voteN=" + conodescount + ",sign=" + newterm.getSign+",mineQ=" + newterm.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr))
+          + ",voteN=" + conodescount + ",sign=" + newterm.getSign + ",mineQ=" + newterm.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr))
         DCtrl.instance.vote_Request = newterm;
         network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), msgid);
         false
       } else {
-        false
+        checkVoteDB(vq)
       }
     })
   }

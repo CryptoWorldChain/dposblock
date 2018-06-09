@@ -43,8 +43,13 @@ message PDNode{
 	string		duty_uid = 11;//记录当前duty的uid
 	int64		last_duty_time = 12;//上次提交的时间
 	int64		last_block_time = 14;//
-	int32		node_count = 20;//当前节点的信息
-	int32		bit_idx = 13;//bitidx;
+	int32		node_count = 15;//当前节点的信息
+	int32		bit_idx = 16;//bitidx;
+	int64 		term_id = 17;
+	int32		term_start_block = 18;
+	int32		term_end_block	= 19;
+	string		term_sign = 20;
+	int32		cominer_start_block = 21;
 }
 
 message PSCoMine{//加入
@@ -59,7 +64,6 @@ message PRetCoMine{//加入的返回信息
 	repeated PDNode co_nodes = 4;//超级节点列表
 	repeated PDNode back_nodes = 5;//备选节点列表
 	DNodeState	co_result = 6;
-	
 	string message_id = 30;
 	string sign = 100;//对上述数据的签名结果
 }

@@ -23,7 +23,13 @@ import org.brewchain.dposblk.pbgens.Dposblock.DNodeState
 object DTask_CoMine extends LogHelper with BitMap {
   def runOnce(implicit network: Network): PDNodeOrBuilder = {
     Thread.currentThread().setName("DTask_Join");
-    val join = PSCoMine.newBuilder().setDn(DCtrl.curDN()).build();
+    val tm = DCtrl.termMiner();
+    if (tm.getTermId > 0 && tm.getBlockRange != null) {
+      DCtrl.curDN().setTermId(tm.getTermId).setTermStartBlock(tm.getBlockRange.getStartBlock)
+        .setTermEndBlock(tm.getBlockRange.getEndBlock).setTermSign(tm.getSign)
+    }
+    val join = PSCoMine.newBuilder().setDn(DCtrl.curDN())
+      .build();
     val msgid = UUIDGenerator.generate();
     val cn = DCtrl.instance.cur_dnode;
     var fastNode: PDNodeOrBuilder = cn;
@@ -64,7 +70,7 @@ object DTask_CoMine extends LogHelper with BitMap {
                 if (retjoin.getCoResult == DNodeState.DN_CO_MINER) {
                   DCtrl.coMinerByUID.put(retjoin.getDn.getBcuid, retjoin.getDn);
                 }
-              }else{
+              } else {
                 log.debug("send JINDOB Failed " + n.uri + ",retobj=" + retjoin)
               }
             } finally {
@@ -96,6 +102,9 @@ object DTask_CoMine extends LogHelper with BitMap {
       && DCtrl.coMinerByUID.size > 0 && DCtrl.coMinerByUID.size >= network.directNodes.size * 2 / 3) {
       log.debug("ready to become cominer is max:cur=" + cn.getCurBlock + ", net=" + fastNode.getCurBlock);
       cn.setState(DNodeState.DN_CO_MINER)
+      if (DCtrl.coMinerByUID.size > 1) {
+        cn.setCominerStartBlock(cn.getCurBlock);
+      }
       cn
     } else {
       null

@@ -49,17 +49,19 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
         MDCSetBCUID(DCtrl.dposNet())
         MDCSetMessageID(pbo.getMessageId)
         val cn = DCtrl.curDN()
-
+        val tm = DCtrl.termMiner();
         ret.setMessageId(pbo.getMessageId);
         ret.setBcuid(cn.getBcuid)
         ret.setRetCode(0).setRetMessage("SUCCESS")
         val vq = DCtrl.voteRequest();
         //
        DTask_DutyTermVote.synchronized({
-          if ((StringUtils.isBlank(cn.getDutyUid) || cn.getDutyUid.equals(pbo.getLastTermUid))
+          if (StringUtils.isBlank(cn.getDutyUid) ||( cn.getDutyUid.equals(pbo.getLastTermUid))
             //&& (StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
-            && (vq.getTermId <= pbo.getLastTermId) && vq.getTermId < pbo.getTermId 
-            || StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) {
+            && (vq.getTermId == pbo.getLastTermId) && vq.getTermId == pbo.getTermId - 1 
+            && (pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock)
+            || StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)
+          ) {
             if (cn.getCurBlock < pbo.getBlockRange.getStartBlock - 1) {
               log.debug("Grant DPos Term Vote but Block Height Not Ready:" + cn.getDutyUid + ",T=" + pbo.getTermId
                 + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
@@ -76,6 +78,9 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
               // 
               log.debug("Grant DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
                 + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
+                + ",PBS=[" + pbo.getBlockRange.getStartBlock+"," + pbo.getBlockRange.getEndBlock+ "]"
+                + ",TBS=[" + tm.getBlockRange.getStartBlock+"," + tm.getBlockRange.getEndBlock+ "]"
+                + ",VBS=[" + vq.getBlockRange.getStartBlock+"," + vq.getBlockRange.getEndBlock+ "]"
                 + ",VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid
                 + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress);
               ret.setResult(VoteResult.VR_GRANTED)

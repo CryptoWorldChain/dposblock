@@ -91,6 +91,8 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
       OValue.newBuilder().setExtdata(cur_dnode.build().toByteString()).build())
   }
   def updateTerm() = {
+    cur_dnode.setDutyUid(term_Miner.getSign).setDutyStartMs(term_Miner.getTermStartMs)
+    .setDutyEndMs(term_Miner.getTermEndMs)
     Daos.dposdb.put(DPOS_NODE_DB_TERM,
       OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
   }
@@ -142,11 +144,28 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
             if (DTask_DutyTermVote.runOnce) {
               continue = true;
               cur_dnode.setState(DNodeState.DN_DUTY_MINER);
+            }else{
+              log.debug("cominer run false:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
+                + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId
+                + ",vqlid=" + DCtrl.voteRequest().getLastTermId + ",tid=" + term_Miner.getTermId
+                + ",tq[" + term_Miner.getBlockRange.getStartBlock + "," + term_Miner.getBlockRange.getEndBlock + "]");
             }
           case DNodeState.DN_DUTY_MINER =>
-            if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock||DCtrl.voteRequest().getLastTermId >= term_Miner.getTermId) {
-                log.debug("cur term force to end:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
-                  + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId + ",tid=" + term_Miner.getTermId);
+            if(term_Miner.getBlockRange.getStartBlock > cur_dnode.getCurBlock + DConfig.BLOCK_DISTANCE_COMINE +
+              term_Miner.getMinerQueueCount){
+              log.debug("cur term force to resync block:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
+                + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId
+                + ",vqlid=" + DCtrl.voteRequest().getLastTermId + ",tid=" + term_Miner.getTermId
+                + ",tq[" + term_Miner.getBlockRange.getStartBlock + "," + term_Miner.getBlockRange.getEndBlock + "]");
+              continue = true;
+              cur_dnode.setState(DNodeState.DN_SYNC_BLOCK);
+            }else
+            if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock || DCtrl.voteRequest().getLastTermId >= term_Miner.getTermId
+              ) {
+              log.debug("cur term force to end:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
+                + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId
+                + ",vqlid=" + DCtrl.voteRequest().getLastTermId + ",tid=" + term_Miner.getTermId
+                + ",tq[" + term_Miner.getBlockRange.getStartBlock + "," + term_Miner.getBlockRange.getEndBlock + "]");
               continue = true;
               cur_dnode.setState(DNodeState.DN_CO_MINER);
             } else if (DTask_MineBlock.runOnce) {
@@ -208,7 +227,7 @@ object DCtrl extends LogHelper {
   //  val superMinerByUID: Map[String, PDNode] = Map.empty[String, PDNode];
   val coMinerByUID: Map[String, PDNode] = Map.empty[String, PDNode];
   def curDN(): PDNode.Builder = instance.cur_dnode
-  def termMiner(): PSDutyTermVoteOrBuilder = instance.term_Miner
+  def termMiner(): PSDutyTermVote.Builder = instance.term_Miner
   def voteRequest(): PSDutyTermVote.Builder = instance.vote_Request
 
   //  def curTermMiner(): PSDutyTermVoteOrBuilder = instance.term_Miner
@@ -233,7 +252,7 @@ object DCtrl extends LogHelper {
           if (coaddr.equals(n)) {
             if (realblkMineMS < blkshouldMineMS) {
               log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockMS=" + tm.getEachBlockMs + ",TermLeft=" + termblockLeft
-                + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign+",bh="+block);
+                + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign + ",bh=" + block);
               Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
             }
             true
@@ -291,8 +310,7 @@ object DCtrl extends LogHelper {
       } else {
         res.getCurrentNumber
       }
-    }else
-    {
+    } else {
       b.getBlockHeight
     }
   }

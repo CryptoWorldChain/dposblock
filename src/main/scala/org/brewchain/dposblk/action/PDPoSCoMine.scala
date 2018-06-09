@@ -61,7 +61,9 @@ object PDPoSNodeCoMineService extends LogHelper with PBUtils with LService[PSCoM
         } else {
           ret.setCoResult(DNodeState.DN_SYNC_BLOCK)
         }
-        log.debug("Join:Success for bcuid=" + pack.getFrom() + ",coresult=" + ret.getCoResult)
+        log.debug("Join:Success for bcuid=" + pack.getFrom() + ",coresult=" + ret.getCoResult+",pbo.coaddr="+pbo.getDn.getCoAddress+",pbo.bcuid="+
+            pbo.getDn.getBcuid)
+        
 
       } catch {
         case e: FBSException => {
