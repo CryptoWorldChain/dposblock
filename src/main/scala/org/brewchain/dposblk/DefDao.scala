@@ -18,6 +18,8 @@ import onight.tfw.ntrans.api.annotation.ActorRequire
 import org.fc.brewchain.p22p.core.PZPCtrl
 import org.brewchain.account.core.BlockChainHelper
 import org.brewchain.account.core.BlockHelper
+import org.brewchain.account.core.TransactionHelper
+import org.fc.brewchain.bcapi.EncAPI
 
 abstract class PSMDPoSNet[T <: Message] extends SessionModules[T] with PBUtils with OLog {
   override def getModule: String = PModule.DOB.name()
@@ -61,7 +63,13 @@ class Daos extends PSMDPoSNet[Message] with ActorService {
 
   @ActorRequire(name = "Block_Helper", scope = "global")
   var blkHelper: BlockHelper = null;
+  
+  @ActorRequire(name = "Transaction_Helper", scope = "global")
+  var txHelper: TransactionHelper = null;
 
+  @ActorRequire(name = "bc_encoder", scope = "global") //  @BeanProperty
+  var enc: EncAPI = null;
+    
   def setPzp(_pzp: PZPCtrl) = {
     pzp = _pzp;
     Daos.pzp = pzp;
@@ -84,6 +92,23 @@ class Daos extends PSMDPoSNet[Message] with ActorService {
   def getBlkHelper: BlockHelper = {
     blkHelper
   }
+  
+  def setTxHelper(_txHelper: TransactionHelper) = {
+    txHelper = _txHelper;
+    Daos.txHelper = _txHelper;
+  }
+  def getTxHelper: TransactionHelper = {
+    txHelper
+  }
+  
+  def setEnc(_enc: EncAPI) = {
+    enc = _enc;
+    Daos.enc = _enc;
+  }
+  def getEnc(): EncAPI = {
+    enc;
+  }
+  
 }
 
 object Daos extends OLog {
@@ -92,9 +117,12 @@ object Daos extends OLog {
   var pzp: PZPCtrl = null;
   var actdb: BlockChainHelper = null;
   var blkHelper: BlockHelper = null;
+  var txHelper: TransactionHelper = null;
+  var enc: EncAPI = null;
   def isDbReady(): Boolean = {
     dposdb != null && dposdb.getDaosupport.isInstanceOf[ODBSupport] &&
       blkHelper != null &&
+      txHelper != null &&
       pzp != null && actdb != null;
   }
 }

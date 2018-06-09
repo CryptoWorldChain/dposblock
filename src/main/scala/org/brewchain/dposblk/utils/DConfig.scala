@@ -9,6 +9,7 @@ object DConfig {
 
   val _DBLK_EPOCH_SEC = prop.get(PROP_DOMAIN + "blk.epoch.sec", 1); //2 seconds each block
   val BLK_EPOCH_MS = prop.get(PROP_DOMAIN + "blk.epoch.ms", 500); //2 seconds each block
+  val TXS_EPOCH_MS = prop.get(PROP_DOMAIN + "txs.epoch.ms", 500);
   val MAX_WAIT_BLK_EPOCH_MS = prop.get(PROP_DOMAIN + "max.wait.blk.epoch.ms", 10 * 1000); //1 min to wait for next block mine 
 
   val SYNCBLK_PAGE_SIZE = prop.get(PROP_DOMAIN + "syncblk.page.size", 10);
@@ -37,6 +38,8 @@ object DConfig {
   val DTV_TIME_MS_EACH_BLOCK = prop.get(PROP_DOMAIN + "dtv.time.ms.each_block", 100);
 
   val TICK_DCTRL_MS = prop.get(PROP_DOMAIN + "tick.dctrl.ms", BLK_EPOCH_MS);
+  val TICK_DCTRL_MS_TX = prop.get(PROP_DOMAIN + "tick.dctrl.ms", TXS_EPOCH_MS);
+
   val INITDELAY_DCTRL_SEC = prop.get(PROP_DOMAIN + "initdelay.dctrl.sec", 1);
 
   val BLOCK_DISTANCE_COMINE = prop.get(PROP_DOMAIN + "block.distance.comine", 5);
@@ -47,6 +50,7 @@ object DConfig {
   val MAX_TIMEOUTSEC_FOR_REVOTE = prop.get(PROP_DOMAIN + "max.timeoutsec.for.revote", 30);
 
   val MAX_TNX_EACH_BLOCK = prop.get(PROP_DOMAIN + "max.tnx.each.block", 100);
+  val MAX_TNX_EACH_BROADCAST = prop.get(PROP_DOMAIN + "max.tnx.each.broadcast", 100);
 
   val MAX_CWS_GUARANTY = prop.get(PROP_DOMAIN + "max.cws.guaranty", 10);
   

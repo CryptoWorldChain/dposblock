@@ -16,6 +16,8 @@ import org.brewchain.dposblk.tasks.DPosNodeController
 import org.brewchain.dposblk.utils.DConfig
 import org.brewchain.dposblk.tasks.Scheduler
 import org.fc.brewchain.p22p.utils.LogHelper
+import org.brewchain.dposblk.tasks.TransactionSync
+import org.brewchain.dposblk.tasks.TxSync
 
 @NActorProvider
 class DPoSStartup extends PSMDPoSNet[Message] {
@@ -76,6 +78,11 @@ class DPoSBGLoader() extends Runnable with LogHelper {
     DCtrl.instance = DPosNodeController(dposnet);
     Scheduler.scheduleWithFixedDelay(DCtrl.instance, DConfig.INITDELAY_DCTRL_SEC,
       Math.min(DConfig.TICK_DCTRL_MS,DConfig.BLK_EPOCH_MS)
+      , TimeUnit.MILLISECONDS)
+      
+     TxSync.instance = TransactionSync(dposnet);
+     Scheduler.scheduleWithFixedDelay(TxSync.instance, DConfig.INITDELAY_DCTRL_SEC,
+      Math.min(DConfig.TICK_DCTRL_MS_TX,DConfig.TXS_EPOCH_MS)
       , TimeUnit.MILLISECONDS)
 
     //    Daos
