@@ -311,6 +311,7 @@ object DCtrl extends LogHelper {
         res.getCurrentNumber
       }
     } else {
+      DCtrl.instance.updateBlockHeight(b.getBlockHeight)
       b.getBlockHeight
     }
   }
