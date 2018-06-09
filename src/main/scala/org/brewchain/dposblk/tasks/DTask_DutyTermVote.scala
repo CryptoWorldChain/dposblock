@@ -83,7 +83,6 @@ object DTask_DutyTermVote extends LogHelper {
           }
         }
         buff.append(x)
-
       }
       var hasConverge = false;
       var banForLocal = false;
@@ -91,58 +90,61 @@ object DTask_DutyTermVote extends LogHelper {
         val sign = kv._1
         val votelist = kv._2
         val dbtempvote = DCtrl.instance.loadVoteReq(sign);
-        log.debug("dbtempvote=" + dbtempvote.getSign + ",sign=" + sign + ",size=" + votelist.size);
+        log.debug("dbtempvote=" + dbtempvote.getSign + ",vid=" + dbtempvote.getTermId + ",TID=" + DCtrl.termMiner().getTermId + ",sign=" + sign + ",size=" + votelist.size);
         if (!hasConverge && StringUtils.equals(dbtempvote.getSign, sign)) {
-          val result = Votes.vote(votelist).PBFTVote({ p =>
-            Some(p.getResult)
-          }, dbtempvote.getCoNodes) match {
-            case Converge(n) =>
-              //          log.debug("converge:" + n); 
-              if (n == VoteResult.VR_GRANTED) {
-                log.debug("Vote Granted will be the new terms:T="
-                  + dbtempvote.getTermId
-                  + ",sign=" + dbtempvote.getSign
-                  + ",N=" + dbtempvote.getCoNodes + ":"
-                  + dbtempvote.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr));
-                DCtrl.instance.term_Miner = dbtempvote
-                DCtrl.instance.updateTerm()
-                hasConverge = true;
-                true
-              } else if (n == VoteResult.VR_REJECT) {
+          if (dbtempvote.getTermId > DCtrl.termMiner().getTermId) {
+            val result = Votes.vote(votelist).PBFTVote({ p =>
+              Some(p.getResult)
+            }, dbtempvote.getCoNodes) match {
+              case Converge(n) =>
+                //          log.debug("converge:" + n); 
+                if (n == VoteResult.VR_GRANTED) {
+                  log.debug("Vote Granted will be the new terms:T="
+                    + dbtempvote.getTermId
+                    + ",curr=" + DCtrl.curDN().getCoAddress
+                    + ",sign=" + dbtempvote.getSign
+                    + ",N=" + dbtempvote.getCoNodes + ":"
+                    + dbtempvote.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr));
+                  DCtrl.instance.term_Miner = dbtempvote
+                  DCtrl.instance.updateTerm()
+                  hasConverge = true;
+                  true
+                } else if (n == VoteResult.VR_REJECT) {
+                  clearRecords(votelist);
+                  if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
+                    banForLocal = true;
+                  }
+                  false
+                } else {
+                  clearRecords(votelist);
+                  if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
+                    banForLocal = true;
+                  }
+                  false
+                }
+              case n: Undecisible =>
+                log.debug("Undecisible:dbsize=" + votelist + ",N=" + dbtempvote.getCoNodes);
+                if (System.currentTimeMillis() - dbtempvote.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
+                  log.debug("clear timeout vote after:" + JodaTimeHelper.secondFromNow(dbtempvote.getTermStartMs))
+                  clearRecords(votelist);
+                }
+                false
+              case n: NotConverge =>
                 clearRecords(votelist);
                 if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
                   banForLocal = true;
                 }
                 false
-              } else {
-                clearRecords(votelist);
-                if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
-                  banForLocal = true;
-                }
+              case a @ _ =>
+                //              clearRecords(votelist);
                 false
-              }
-            case n: Undecisible =>
-              log.debug("Undecisible:dbsize=" + votelist + ",N=" + dbtempvote.getCoNodes);
-              if (System.currentTimeMillis() - dbtempvote.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
-                log.debug("clear timeout vote after:" + JodaTimeHelper.secondFromNow(dbtempvote.getTermStartMs))
-                clearRecords(votelist);
-              }
-              false
-            case n: NotConverge =>
-              clearRecords(votelist);
-              if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
-                banForLocal = true;
-              }
-              false
-            case a @ _ =>
-              //              clearRecords(votelist);
-              false
+            }
+            if (result) {
+              hasConverge = result
+            }
+          } else { //unclean data
+            clearRecords(votelist);
           }
-          if (result) {
-            hasConverge = result
-          }
-        } else { //unclean data
-          clearRecords(votelist);
         }
       }
       if (!hasConverge && banForLocal) {

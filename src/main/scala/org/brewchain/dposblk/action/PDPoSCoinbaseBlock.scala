@@ -54,6 +54,8 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
         cn.synchronized {
           if (StringUtils.equals(pbo.getCoAddress, cn.getCoAddress) || pbo.getBlockHeight > cn.getCurBlock) {
             if (pbo.getTermId>DCtrl.termMiner().getTermId||DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress, pbo.getMineTime)) {
+              
+              
               //              log.debug("newblock: height=" + pbo.getBlockHeight + ",CoAddr=" + pbo.getCoAddress
               //                + ",T=" + pbo.getTermId + ",CT=" + DCtrl.termMiner().getTermId + ",TU=" + DCtrl.termMiner().getSign
               //                + ",CB=" + cn.getCurBlock);
@@ -68,10 +70,18 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
                   log.info("newblock:ok,H=" + pbo.getBlockHeight + ",DBH=" + n + ":coadrr=" + pbo.getCoAddress+",MN="+DCtrl.coMinerByUID
                       .size+",DN="+DCtrl.dposNet().directNodeByIdx.size+",PN="+DCtrl.dposNet().pendingNodeByBcuid.size)
                   ret.setResult(CoinbaseResult.CR_PROVEN)
-                case _ =>
+                case n@_ =>
+                  log.info("newblock:Reject,H=" + pbo.getBlockHeight + ",DBH=" + n + ":coadrr=" + pbo.getCoAddress+",MN="+DCtrl.coMinerByUID
+                      .size+",DN="+DCtrl.dposNet().directNodeByIdx.size+",PN="+DCtrl.dposNet().pendingNodeByBcuid.size)
                   ret.setResult(CoinbaseResult.CR_REJECT)
               }
 
+              if(pbo.getTermId>DCtrl.termMiner().getTermId){
+                log.debug("local term id lower than block:pbot="+pbo.getTermId+",tm="+DCtrl.termMiner().getTermId
+                    +"H=" + pbo.getBlockHeight + ",DBH=" + cn.getCurBlock + ":coadrr=" + pbo.getCoAddress+",MN="+DCtrl.coMinerByUID
+                      .size+",DN="+DCtrl.dposNet().directNodeByIdx.size+",PN="+DCtrl.dposNet().pendingNodeByBcuid.size);
+                BlockSync.tryBackgroundSyncLogs(pbo.getBlockHeight, pbo.getBcuid)(DCtrl.dposNet())
+              }
               //              if (pbo.getBlockHeight > cn.getCurBlock) {
               //cn.setCurBlock(pbo.getBlockHeight)
               //DCtrl.instance.syncToDB();

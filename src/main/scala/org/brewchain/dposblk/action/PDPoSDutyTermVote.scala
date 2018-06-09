@@ -70,6 +70,7 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
                 + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress+",from="+pbo.getBcuid);
               ret.setResult(VoteResult.VR_GRANTED)
               ret.setTermId(pbo.getTermId)
+              ret.setBcuid(cn.getBcuid)
               ret.setSign(pbo.getSign)
               ret.setVoteAddress(cn.getCoAddress)
               DCtrl.instance.updateVoteReq(pbo);
@@ -86,13 +87,14 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
               ret.setResult(VoteResult.VR_GRANTED)
               ret.setTermId(pbo.getTermId)
               ret.setSign(pbo.getSign)
+              ret.setBcuid(cn.getBcuid)
               
               ret.setVoteAddress(cn.getCoAddress)
               DCtrl.instance.updateVoteReq(pbo);
             }
             //
           } else {
-            log.debug("Reject DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
+            log.debug("Reject DPos Term Vote:LastSign=" + cn.getDutyUid + ",T=" + pbo.getTermId
               + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
               + ",VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid
               + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress);

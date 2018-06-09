@@ -30,7 +30,7 @@ object TxSync extends LogHelper  {
     
     def trySyncTx(network: Network): Unit = {
       
-      log.debug("start broadcast transaction")
+//      log.debug("start broadcast transaction")
       val res = Daos.txHelper.getWaitSendTxToSend(DConfig.MAX_TNX_EACH_BROADCAST)
       if(res.getTxHexStrCount()>0) {
         log.debug("ready to broadcast transaction, batch count::" + res.getTxHexStrCount())
@@ -40,10 +40,9 @@ object TxSync extends LogHelper  {
         for(x <- res.getTxHexStrList()){
            syncTransaction.addTxHexStr(x);
         }
-          
         network.dwallMessage("BRTDOB", Left(syncTransaction.build()), msgid)
       } else {
-        log.debug("not found transaction for broadcast" + res.getTxHexStrCount())
+//        log.debug("not found transaction for broadcast:" + res.getTxHexStrCount())
       }
     }
 }
