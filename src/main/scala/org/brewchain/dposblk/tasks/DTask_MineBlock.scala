@@ -39,23 +39,25 @@ object DTask_MineBlock extends LogHelper with BitMap {
       if (isOverride) {
         //try to vote...
         //
-        DCtrl.minerByBlockHeight(cn.getCurBlock + 1) match{
+        DCtrl.minerByBlockHeight(cn.getCurBlock + 1) match {
           case Some(coaddr) =>
-            if(isMyBlock)
-            {
-              DTask_DutyTermVote.VoteTerm(network,coaddr,cn.getCurBlock + 1)
+            if (isMyBlock) {
+              DTask_DutyTermVote.VoteTerm(network, coaddr, cn.getCurBlock + 1)
             }
             DCtrl.instance.cur_dnode.setState(DNodeState.DN_CO_MINER);
-          case None=>
+          case None =>
         }
-        
+
         false;
       } else if (isMyBlock) {
         MDCSetBCUID(network)
         val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock,
           ByteUtil.EMPTY_BYTE_ARRAY, ByteUtil.EMPTY_BYTE_ARRAY);
         val newblockheight = cn.getCurBlock + 1
-        if (newblockheight != newblk.getHeader.getNumber) {
+        if (newblk == null || newblk.getHeader == null) {
+          log.debug("new block header is null: ch=" + newblockheight + ",dbh=" + newblk);
+          false
+        } else if (newblockheight != newblk.getHeader.getNumber) {
           log.debug("mining error: ch=" + newblockheight + ",dbh=" + newblk.getHeader.getNumber);
           false;
         } else {

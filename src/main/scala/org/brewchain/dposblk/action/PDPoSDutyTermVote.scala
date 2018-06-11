@@ -61,6 +61,10 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
 
         val vq = DCtrl.voteRequest();
         //
+        ret.setTermId(pbo.getTermId)
+        ret.setSign(pbo.getSign)
+        ret.setVoteAddress(cn.getCoAddress).setResult(VoteResult.VR_GRANTED)
+
         DTask_DutyTermVote.synchronized({
           if ((StringUtils.isBlank(cn.getDutyUid) || (cn.getDutyUid.equals(pbo.getLastTermUid))
             //&& (StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
@@ -91,9 +95,6 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
                 false
               }
             }
-            ret.setTermId(pbo.getTermId)
-            ret.setSign(pbo.getSign)
-            ret.setVoteAddress(cn.getCoAddress).setResult(VoteResult.VR_GRANTED)
 
             if (pbo.getBlockRange.getStartBlock != tm.getBlockRange.getEndBlock + 1 && tm.getTermId > 0) {
               if (pbo.getRewriteTerm == null) {
@@ -110,12 +111,12 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
                 if (!isOverrided || !isMiner) { //
                   log.debug("Not your Miner Voted!!isMiner=" + isMiner + ",isOverrided=" + isOverrided
                     + ",B=" + cn.getCurBlock + ",BS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock
-                    + "],VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid 
+                    + "],VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid
                     + ",PU=" + pbo.getSign + ",PTM=" + pbo.getLastTermUid
                     + ",TM=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock
                     + "]");
                   ret.setResult(VoteResult.VR_REJECT)
-                }else{
+                } else {
                   //should be voting
                 }
               }
@@ -143,7 +144,7 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
                   ret.setSign(pbo.getSign)
                   ret.setVoteAddress(cn.getCoAddress)
                   DCtrl.instance.updateVoteReq(pbo);
-                  BlockSync.tryBackgroundSyncLogs(pbo.getBlockRange.getStartBlock - 1, pbo.getBcuid)(net)
+//                  BlockSync.tryBackgroundSyncLogs(pbo.getBlockRange.getStartBlock - 1, pbo.getBcuid)(net)
                 } else {
                   // 
                   log.debug("Grant DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
@@ -178,20 +179,21 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
 
           DCtrl.instance.saveVoteReq(pbo);
           DTask_DutyTermVote.notifyAll()
-
         })
+
         net.dwallMessage("DTRDOB", Left(ret.build()), pbo.getMessageId);
         //        }
 
       } catch {
         case e: FBSException => {
+          log.error("fbsException:" + e.getMessage, e);
           ret.clear()
           ret.setRetCode(-2).setRetMessage(e.getMessage)
         }
         case t: Throwable => {
           log.error("error:", t);
           ret.clear()
-          ret.setRetCode(-3).setRetMessage(t.getMessage)
+          ret.setRetCode(-3).setRetMessage("" + t.getMessage)
         }
       } finally {
         handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
