@@ -126,7 +126,7 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
             }else{
               false
             }
-            if (reject) {
+            if (!reject) {
               if (pbo.getTermId == tm.getTermId + 1 && q.size > 0) {
                 log.debug("Reject DPos TermVote Miner not quntified,cn.duty=" + cn.getDutyUid + ",T=" + pbo.getTermId
                   + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
