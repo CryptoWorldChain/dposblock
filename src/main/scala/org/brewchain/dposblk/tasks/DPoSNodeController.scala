@@ -304,6 +304,9 @@ object DCtrl extends LogHelper {
   def saveBlock(b: PBlockEntryOrBuilder): Int = {
     if (!b.getCoinbaseBcuid.equals(DCtrl.curDN().getBcuid)) {
       val res = Daos.blkHelper.ApplyBlock(b.getBlockHeader);
+//      if (res.getTxHashsCount > 0) {
+//        // 
+//      }
       if (res.getCurrentNumber > 0) {
         DCtrl.instance.updateBlockHeight(res.getCurrentNumber)
         res.getCurrentNumber
