@@ -151,8 +151,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
                 + ",tq[" + term_Miner.getBlockRange.getStartBlock + "," + term_Miner.getBlockRange.getEndBlock + "]");
             }
           case DNodeState.DN_DUTY_MINER =>
-            if(term_Miner.getBlockRange.getStartBlock > cur_dnode.getCurBlock + DConfig.BLOCK_DISTANCE_COMINE +
-              term_Miner.getMinerQueueCount){
+            if(term_Miner.getBlockRange.getStartBlock > cur_dnode.getCurBlock){
               log.debug("cur term force to resync block:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
                 + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId
                 + ",vqlid=" + DCtrl.voteRequest().getLastTermId + ",tid=" + term_Miner.getTermId
@@ -252,7 +251,7 @@ object DCtrl extends LogHelper {
               log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockMS=" + tm.getEachBlockMs + ",TermLeft=" + termblockLeft
                 + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign + ",bh=" + block);
               Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
-            }
+            }  
             true
           } else {
             if (realblkMineMS > blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) {

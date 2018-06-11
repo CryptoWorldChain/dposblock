@@ -172,11 +172,12 @@ object DTask_DutyTermVote extends LogHelper {
       val vq = DCtrl.voteRequest()
       log.debug("dutyvote:vq.tid=" + vq.getTermId + "," + vq.getBlockRange.getStartBlock + "," + vq.getBlockRange.getEndBlock + "]"
         + ",vq.lasttermuid=" + vq.getLastTermUid + ",tm.termid=" + vq.getTermId)
-      if (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
+      if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         && vq.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock
         && vq.getBlockRange.getStartBlock >= cn.getCurBlock
         && vq.getTermId > 0
-        || (StringUtils.isNotBlank(vq.getLastTermUid) && vq.getLastTermId.equals(tm.getTermId))) {
+        || (StringUtils.isNotBlank(vq.getLastTermUid) && vq.getLastTermId.equals(tm.getTermId)
+        &&tm.getTermId>0)&& JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) <= DConfig.DTV_TIMEOUT_SEC)) {
         checkVoteDB(vq)
       } else if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         || JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) > DConfig.DTV_TIMEOUT_SEC)
