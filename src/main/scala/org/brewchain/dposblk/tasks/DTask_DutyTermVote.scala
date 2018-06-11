@@ -25,6 +25,7 @@ import org.brewchain.bcapi.gens.Oentity.OKey
 import com.google.protobuf.ByteString
 import org.apache.commons.codec.binary.Hex
 import org.brewchain.dposblk.pbgens.Dposblock.PSDutyTermVote.RewriteTerm
+import org.brewchain.dposblk.pbgens.Dposblock.PDNode
 
 //获取其他节点的term和logidx，commitidx
 object DTask_DutyTermVote extends LogHelper {
@@ -40,6 +41,7 @@ object DTask_DutyTermVote extends LogHelper {
     //      DTask_DutyTermVote.wait(ban_sec * 1000)
     //    })
   }
+  val omitNodes: Map[String, PDNode] = Map.empty;
   def clearRecords(votelist: Buffer[PDutyTermResult.Builder]): Unit = {
     Daos.dposdb.batchDelete(votelist.map { p =>
       OKey.newBuilder().setData(
@@ -217,7 +219,7 @@ object DTask_DutyTermVote extends LogHelper {
     val msgid = UUIDGenerator.generate();
     MDCSetMessageID(msgid);
     DCtrl.coMinerByUID.filter(p => {
-      network.nodeByBcuid(p._1) == network.noneNode
+      network.nodeByBcuid(p._1) == network.noneNode || StringUtils.equals(omitCoaddr, p._2.getCoAddress)
     }).map { p =>
       log.debug("remove Node:" + p._1);
       DCtrl.coMinerByUID.remove(p._1);
@@ -227,6 +229,7 @@ object DTask_DutyTermVote extends LogHelper {
     val vq = DCtrl.voteRequest()
 
     val quantifyminers = DCtrl.coMinerByUID.filter(p =>
+
       if (!StringUtils.equals(omitCoaddr, p._2.getCoAddress) &&
         (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM - tm.getMinerQueueCount &&
           (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
@@ -255,12 +258,13 @@ object DTask_DutyTermVote extends LogHelper {
         .setMaxTnxEachBlock(DConfig.MAX_TNX_EACH_BLOCK)
         .setBcuid(cn.getBcuid)
         .setTermStartMs(System.currentTimeMillis());
-      
-      if (overridedBlock > 0) {
-        newterm.setCoNodes(newterm.getCoNodes - DCtrl.coMinerByUID.filter(p=>p._2.getCoAddress.equals(omitCoaddr)).size)
+
+      if (overridedBlock > 0 && StringUtils.isNotBlank(omitCoaddr)) {
+        newterm.setCoNodes(newterm.getCoNodes - DCtrl.coMinerByUID.filter(p => p._2.getCoAddress.equals(omitCoaddr)).size)
         log.debug("overrideBlockedVote!!TID=" + tm.getTermId + ",Tuid=" + tm.getSign + ",block=" + overridedBlock + ",cur=" + cn.getCurBlock);
         newterm.setRewriteTerm(RewriteTerm.newBuilder().setBlockLost(overridedBlock)
           .setRewriteMs(System.currentTimeMillis()).setTermStartMs(tm.getTermStartMs))
+
       }
       newterm.setTermEndMs(DConfig.DTV_TIME_MS_EACH_BLOCK * mineBlockCount);
 
