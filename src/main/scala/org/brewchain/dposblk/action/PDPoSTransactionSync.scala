@@ -24,7 +24,7 @@ import org.brewchain.dposblk.tasks.DCtrl
 import onight.tfw.otransio.api.PacketHelper
 import org.fc.brewchain.bcapi.exception.FBSException
 import org.brewchain.dposblk.Daos
-import org.brewchain.account.gens.Tx.MultiTransaction
+import org.brewchain.evmapi.gens.Tx.MultiTransaction
 
 import scala.collection.JavaConversions._
 

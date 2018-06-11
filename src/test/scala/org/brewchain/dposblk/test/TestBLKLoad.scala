@@ -2,7 +2,7 @@ package org.brewchain.dposblk.test
 
 import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntry
 import org.apache.commons.codec.binary.Base64
-import org.brewchain.account.gens.Block.BlockEntity
+import org.brewchain.evmapi.gens.Block.BlockEntity
 
 object TestBLKLoad {
   def main(args: Array[String]): Unit = {

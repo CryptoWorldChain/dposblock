@@ -27,7 +27,7 @@ dependencies {
 	compile ("org.brewchain:org.brewchain.raftnet:3.0.0")
 	
 	compile ("org.brewchain:org.brewchain.account:1.0.5")
-	
+	compile ("org.brewchain:org.brewchain.evmapi:1.0.0")
 }
 
 jar {
