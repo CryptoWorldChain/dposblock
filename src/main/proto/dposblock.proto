@@ -51,6 +51,7 @@ message PDNode{
 	int32		term_end_block	= 19;
 	string		term_sign = 20;
 	int32		cominer_start_block = 21;
+	string		last_term_sign = 22;
 }
 
 message PSCoMine{//加入
@@ -147,6 +148,13 @@ message  PSDutyTermVote{
 	
 	string 	bcuid = 13;//节点
 	int32	max_tnx_each_block = 14;//
+	message	RewriteTerm{
+		int32	block_lost = 1;
+		int64	term_start_ms = 2;//开始的时间
+		int64	rewrite_ms = 3;//复写的秒数
+	}
+	
+	RewriteTerm		rewriteTerm = 15;
 	string 	message_id = 30;
 	string 	sign = 50;//
 }
@@ -162,7 +170,10 @@ message  PDutyTermResult{
 	VoteResult	result = 3;
 	int64 	term_id = 4;
 	string 	vote_address = 5;
-	string 		bcuid = 10;//节点
+	int32	cur_block = 6;//当前高度
+	int64	cur_termid = 7;//当前节点termid
+	string	cur_term_sign = 8;//当前节点的term
+	string 	bcuid = 10;//节点
 	string 	message_id = 30;
 	string 	sign = 50;//
 }

@@ -137,7 +137,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
                 log.debug("dpos waiting for init:" + n);
                 false
               case x @ _ =>
-                log.debug("not ready");
+                log.debug("not ready:"+x);
                 false
             }
           case DNodeState.DN_CO_MINER =>
@@ -151,7 +151,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
                 + ",tq[" + term_Miner.getBlockRange.getStartBlock + "," + term_Miner.getBlockRange.getEndBlock + "]");
             }
           case DNodeState.DN_DUTY_MINER =>
-            if(term_Miner.getBlockRange.getStartBlock > cur_dnode.getCurBlock){
+            if(term_Miner.getBlockRange.getStartBlock > cur_dnode.getCurBlock + term_Miner.getMinerQueueCount){
               log.debug("cur term force to resync block:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
                 + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId
                 + ",vqlid=" + DCtrl.voteRequest().getLastTermId + ",tid=" + term_Miner.getTermId
@@ -234,12 +234,12 @@ object DCtrl extends LogHelper {
       instance.cur_dnode.getStateValue > DNodeState.DN_INIT_VALUE
   }
 
-  def checkMiner(block: Int, coaddr: String, mineTime: Long, maxWaitMS: Long = 1L): Boolean = {
+  def checkMiner(block: Int, coaddr: String, mineTime: Long, maxWaitMS: Long = 1L): (Boolean,Boolean) = {
     val tm = termMiner().getBlockRange;
     if (block > tm.getEndBlock || block < tm.getStartBlock) {
       log.debug("checkMiner:False,block too large:" + block + ",[" + tm.getStartBlock + "," + tm.getEndBlock + "],sign="
         + termMiner.getSign + ",TID=" + termMiner.getTermId)
-      false
+      (false,false)
     } else {
       val blkshouldMineMS = (block - tm.getStartBlock + 1) * tm.getEachBlockMs + termMiner().getTermStartMs
       val realblkMineMS = mineTime;
@@ -252,19 +252,19 @@ object DCtrl extends LogHelper {
                 + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign + ",bh=" + block);
               Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
             }  
-            true
+            (true,false)
           } else {
             if (realblkMineMS > blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) {
               minerByBlockHeight(block + ((realblkMineMS - blkshouldMineMS) / DConfig.MAX_WAIT_BLK_EPOCH_MS).asInstanceOf[Int]) match {
                 case Some(nn) =>
                   log.debug("Override miner for Next:check:" + blkshouldMineMS + ",realblkmine=" + realblkMineMS + ",n=" + n
                     + ",next=" + nn + ",coaddr=" + coaddr + ",block=" + (block) + ",TermLeft=" + termblockLeft + ",Result=" + coaddr.equals(nn)
-                    + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign);
-                  coaddr.equals(nn)
+                    + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign);//try to revote.
+                  (coaddr.equals(nn),true)
                 case None =>
                   log.debug("wait for Miner:Should=" + blkshouldMineMS + ",Real=" + realblkMineMS + ",eachBlockMS=" + tm.getEachBlockMs + ",TermLeft=" + termblockLeft
                     + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign);
-                  false
+                  (false,true)
               }
             } else {
               //              log.debug("wait for timeout to Mine:ShouldT=" + (blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) + ",realblkmine=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockSec
@@ -272,7 +272,7 @@ object DCtrl extends LogHelper {
               if (realblkMineMS < blkshouldMineMS) {
                 Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
               }
-              false
+              (false,false)
             }
 
           }
@@ -281,7 +281,7 @@ object DCtrl extends LogHelper {
             //            log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockSec + ",TermLeft=" + termblockLeft);
             Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
           }
-          false
+          (false,false)
       }
     }
   }

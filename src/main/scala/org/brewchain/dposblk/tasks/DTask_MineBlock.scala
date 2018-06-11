@@ -34,8 +34,23 @@ object DTask_MineBlock extends LogHelper with BitMap {
       val msgid = UUIDGenerator.generate();
       val cn = DCtrl.instance.cur_dnode;
       val curtime = System.currentTimeMillis();
-      if (DCtrl.checkMiner(cn.getCurBlock + 1, cn.getCoAddress, curtime,
-        DConfig.BLK_EPOCH_MS)) {
+      val (isMyBlock, isOverride) = DCtrl.checkMiner(cn.getCurBlock + 1, cn.getCoAddress, curtime,
+        DConfig.BLK_EPOCH_MS);
+      if (isOverride) {
+        //try to vote...
+        //
+        DCtrl.minerByBlockHeight(cn.getCurBlock + 1) match{
+          case Some(coaddr) =>
+            if(isMyBlock)
+            {
+              DTask_DutyTermVote.VoteTerm(network,coaddr,cn.getCurBlock + 1)
+            }
+            DCtrl.instance.cur_dnode.setState(DNodeState.DN_CO_MINER);
+          case None=>
+        }
+        
+        false;
+      } else if (isMyBlock) {
         MDCSetBCUID(network)
         val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock,
           ByteUtil.EMPTY_BYTE_ARRAY, ByteUtil.EMPTY_BYTE_ARRAY);

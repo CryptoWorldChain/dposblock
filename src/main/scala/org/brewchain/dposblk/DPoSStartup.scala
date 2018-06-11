@@ -18,6 +18,7 @@ import org.brewchain.dposblk.tasks.Scheduler
 import org.fc.brewchain.p22p.utils.LogHelper
 import org.brewchain.dposblk.tasks.TransactionSync
 import org.brewchain.dposblk.tasks.TxSync
+import onight.tfw.outils.serialize.UUIDGenerator
 
 @NActorProvider
 class DPoSStartup extends PSMDPoSNet[Message] {
@@ -71,7 +72,7 @@ class DPoSBGLoader() extends Runnable with LogHelper {
       Thread.sleep(5000);
     }
     val naccount = Daos.actdb.getNodeAccount;
-    
+    UUIDGenerator.setJVM(dposnet.root().bcuid.substring(1))
     dposnet.changeNodeVAddr(naccount);
     log.debug("dposnet.initOK:My Node=" + dposnet.root() + ",CoAddr=" + dposnet.root().v_address) // my node
 

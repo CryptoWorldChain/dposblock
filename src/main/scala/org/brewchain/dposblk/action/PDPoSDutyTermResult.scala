@@ -54,7 +54,7 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
         ret.setMessageId(pbo.getMessageId);
         ret.setRetCode(0).setRetMessage("SUCCESS")
         val cn = DCtrl.curDN()
-//        val vq = DCtrl.voteRequest();
+        //        val vq = DCtrl.voteRequest();
         //
         //        this.synchronized({
         //          if ((StringUtils.isNotBlank(cn.getDutyUid))
@@ -73,9 +73,17 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
             .setInfo(pbo.getSign)
             .setNonce(pbo.getResultValue).build())
         log.debug("Get DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
-          + ",sign=" + pbo.getSign + ",VA=" + pbo.getVoteAddress +",FROM="+pbo.getBcuid+ ",Result=" + pbo.getResult);
+          + ",sign=" + pbo.getSign + ",VA=" + pbo.getVoteAddress + ",FROM=" + pbo.getBcuid + ",Result=" + pbo.getResult);
         DTask_DutyTermVote.synchronized({
-          DTask_DutyTermVote.notifyAll() })
+          DTask_DutyTermVote.notifyAll()
+        })
+        //save bc info
+
+        DCtrl.coMinerByUID.get(pbo.getBcuid) match {
+          case Some(p) =>
+            DCtrl.coMinerByUID.put(pbo.getBcuid,p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(pbo.getCurTermid).setTermSign(pbo.getCurTermSign).build());
+          case None =>
+        }
         //
         //          }
         //        })

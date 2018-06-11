@@ -23,6 +23,8 @@ import org.fc.brewchain.p22p.core.Votes.NotConverge
 import scala.collection.mutable.Map
 import org.brewchain.bcapi.gens.Oentity.OKey
 import com.google.protobuf.ByteString
+import org.apache.commons.codec.binary.Hex
+import org.brewchain.dposblk.pbgens.Dposblock.PSDutyTermVote.RewriteTerm
 
 //获取其他节点的term和logidx，commitidx
 object DTask_DutyTermVote extends LogHelper {
@@ -48,13 +50,13 @@ object DTask_DutyTermVote extends LogHelper {
   }
   def checkVoteDB(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
     val records = Daos.dposdb.listBySecondKey("D" + vq.getTermId)
-    //    log.debug("check db status:B[=" + vq.getBlockRange.getStartBlock + ","
-    //      + vq.getBlockRange.getEndBlock + "],T="
-    //      + vq.getTermId
-    //      + ",sign=" + vq.getSign
-    //      + ",N=" + vq.getCoNodes
-    //      + ",dbsize=" +
-    //      records.get.size())
+    log.debug("check db status:B[=" + vq.getBlockRange.getStartBlock + ","
+      + vq.getBlockRange.getEndBlock + "],T="
+      + vq.getTermId
+      + ",sign=" + vq.getSign
+      + ",N=" + vq.getCoNodes
+      + ",dbsize=" +
+      records.get.size())
     if (records.get.size() == 0) {
       DCtrl.voteRequest().clear()
       false
@@ -123,7 +125,7 @@ object DTask_DutyTermVote extends LogHelper {
                   false
                 }
               case n: Undecisible =>
-                log.debug("Undecisible:dbsize=" + votelist + ",N=" + dbtempvote.getCoNodes);
+                log.debug("Undecisible:dbsize=" + votelist.size + ",N=" + dbtempvote.getCoNodes);
                 if (System.currentTimeMillis() - dbtempvote.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
                   log.debug("clear timeout vote after:" + JodaTimeHelper.secondFromNow(dbtempvote.getTermStartMs))
                   clearRecords(votelist);
@@ -170,14 +172,15 @@ object DTask_DutyTermVote extends LogHelper {
       val cn = DCtrl.curDN();
       val tm = DCtrl.termMiner();
       val vq = DCtrl.voteRequest()
-      log.debug("dutyvote:vq.tid=" + vq.getTermId + "," + vq.getBlockRange.getStartBlock + "," + vq.getBlockRange.getEndBlock + "]"
-        + ",vq.lasttermuid=" + vq.getLastTermUid + ",tm.termid=" + vq.getTermId)
+      log.debug("dutyvote:vq.tid=" + vq.getTermId + ",B=" + cn.getCurBlock + ",vq[" + vq.getBlockRange.getStartBlock + "," + vq.getBlockRange.getEndBlock + "]"
+        + ",tm[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
+        + ",vq.lasttermuid=" + vq.getLastTermUid + ",tm.sign=" + tm.getSign + ",vqsign=" + vq.getSign + ",tid=" + tm.getTermId + ",banVote=" + (System.currentTimeMillis() <= ban_for_vote_sec))
       if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         && vq.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock
         && vq.getBlockRange.getStartBlock >= cn.getCurBlock
         && vq.getTermId > 0
         || (StringUtils.isNotBlank(vq.getLastTermUid) && vq.getLastTermId.equals(tm.getTermId)
-        &&tm.getTermId>0)&& JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) <= DConfig.DTV_TIMEOUT_SEC)) {
+          && tm.getTermId > 0) && JodaTimeHelper.secondIntFromNow(vq.getTermStartMs) <= DConfig.DTV_TIMEOUT_SEC)) {
         checkVoteDB(vq)
       } else if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         || JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) > DConfig.DTV_TIMEOUT_SEC)
@@ -188,64 +191,108 @@ object DTask_DutyTermVote extends LogHelper {
 
         val msgid = UUIDGenerator.generate();
         MDCSetMessageID(msgid);
-
-        //      log.debug("try vote new term:");
-        DCtrl.coMinerByUID.filter(p => {
-          network.nodeByBcuid(p._1) == network.noneNode
-        }).map { p =>
-          log.debug("remove Node:" + p._1);
-          DCtrl.coMinerByUID.remove(p._1);
+        val canvote = if (JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) < DConfig.DTV_TIMEOUT_SEC &&
+          StringUtils.isNotBlank(tm.getSign) && tm.getCoNodes > 1) {
+          val idx = (Math.abs(tm.getSign.hashCode()) % tm.getMinerQueueCount)
+          tm.getMinerQueue(idx).getMinerCoaddr.equals(cn.getCoAddress)
+        } else {
+          true
         }
-
-        val newterm = PSDutyTermVote.newBuilder();
-        val conodescount = Math.min(DCtrl.coMinerByUID.size, DConfig.DTV_MAX_SUPER_MINER);
-        val mineBlockCount = DConfig.DTV_MUL_BLOCKS_EACH_TERM * conodescount;
-        val startBlk = cn.getCurBlock + 1;
-        newterm.setBlockRange(BlockRange.newBuilder()
-          .setStartBlock(startBlk)
-          .setEndBlock(startBlk + mineBlockCount - 1)
-          .setEachBlockMs(DConfig.BLK_EPOCH_MS))
-          .setCoNodes(conodescount)
-          .setMessageId(msgid)
-          .setCoAddress(DCtrl.instance.cur_dnode.getCoAddress)
-          .setCwsGuaranty(DConfig.MAX_CWS_GUARANTY)
-          .setSliceId(1)
-          .setMaxTnxEachBlock(DConfig.MAX_TNX_EACH_BLOCK)
-          .setBcuid(cn.getBcuid)
-          .setTermStartMs(System.currentTimeMillis());
-
-        newterm.setTermEndMs(DConfig.DTV_TIME_MS_EACH_BLOCK * mineBlockCount);
-
-        newterm.setTermId(tm.getTermId + 1)
-          .setLastTermId(tm.getTermId)
-          .setLastTermUid(tm.getMessageId)
-          .setSign(msgid)
-
-        val rand = Math.random() * 1000
-        val rdns = scala.util.Random.shuffle(DCtrl.coMinerByUID);
-        //      log.debug(" rdns=" + rdns.foldLeft("")((a, b) => a + "," + b._1));
-        var i = newterm.getBlockRange.getStartBlock;
-        var bitcc = BigInt(0);
-
-        while (newterm.getMinerQueueCount < mineBlockCount) {
-          rdns.map { x =>
-            if (newterm.getMinerQueueCount < mineBlockCount) {
-              //              log.debug(" add miner at Queue," + x._2.getCoAddress + ",blockheight=" + i);
-              newterm.addMinerQueue(TermBlock.newBuilder().setBlockHeight(i)
-                .setMinerCoaddr(x._2.getCoAddress))
-              i = i + 1;
-            }
-          }
+        if (canvote) {
+          //      log.debug("try vote new term:");
+          VoteTerm(network);
+          false
+        } else {
+          log.debug("cannot vote Sec=" + JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) + ",DV=" + DConfig.DTV_TIMEOUT_SEC
+            + ",co" + tm.getCoNodes);
+          false
         }
-        log.debug("try to vote:newterm=" + newterm.getTermId + ",curterm=" + tm.getTermId
-          + ",voteN=" + conodescount + ",sign=" + newterm.getSign + ",mineQ=" + newterm.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr))
-        DCtrl.instance.vote_Request = newterm;
-        network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), msgid);
-        false
       } else {
         checkVoteDB(vq)
       }
     })
+  }
+  def VoteTerm(implicit network: Network, omitCoaddr: String = "", overridedBlock: Int = 0): Unit = {
+
+    val msgid = UUIDGenerator.generate();
+    MDCSetMessageID(msgid);
+    DCtrl.coMinerByUID.filter(p => {
+      network.nodeByBcuid(p._1) == network.noneNode
+    }).map { p =>
+      log.debug("remove Node:" + p._1);
+      DCtrl.coMinerByUID.remove(p._1);
+    }
+    val cn = DCtrl.curDN();
+    val tm = DCtrl.termMiner();
+    val vq = DCtrl.voteRequest()
+
+    val quantifyminers = DCtrl.coMinerByUID.filter(p =>
+      if (!StringUtils.equals(omitCoaddr, p._2.getCoAddress) &&
+        (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM - tm.getMinerQueueCount &&
+          (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
+            StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))) {
+        true
+      } else {
+        log.debug("remove unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
+          + ",cn=" + cn.getCurBlock
+          + ",pbtsign=" + p._2.getTermSign + ",tmsign=" + tm.getSign + ",lasttmsig=" + tm.getLastTermUid)
+        false;
+      })
+    if (quantifyminers.size > 0) {
+      val newterm = PSDutyTermVote.newBuilder();
+      val conodescount = Math.min(quantifyminers.size, DConfig.DTV_MAX_SUPER_MINER);
+      val mineBlockCount = DConfig.DTV_MUL_BLOCKS_EACH_TERM * conodescount;
+      val startBlk = cn.getCurBlock + 1;
+      newterm.setBlockRange(BlockRange.newBuilder()
+        .setStartBlock(startBlk)
+        .setEndBlock(startBlk + mineBlockCount - 1)
+        .setEachBlockMs(DConfig.BLK_EPOCH_MS))
+        .setCoNodes(DCtrl.coMinerByUID.size)
+        .setMessageId(msgid)
+        .setCoAddress(DCtrl.instance.cur_dnode.getCoAddress)
+        .setCwsGuaranty(DConfig.MAX_CWS_GUARANTY)
+        .setSliceId(1)
+        .setMaxTnxEachBlock(DConfig.MAX_TNX_EACH_BLOCK)
+        .setBcuid(cn.getBcuid)
+        .setTermStartMs(System.currentTimeMillis());
+      
+      if (overridedBlock > 0) {
+        newterm.setCoNodes(newterm.getCoNodes - DCtrl.coMinerByUID.filter(p=>p._2.getCoAddress.equals(omitCoaddr)).size)
+        log.debug("overrideBlockedVote!!TID=" + tm.getTermId + ",Tuid=" + tm.getSign + ",block=" + overridedBlock + ",cur=" + cn.getCurBlock);
+        newterm.setRewriteTerm(RewriteTerm.newBuilder().setBlockLost(overridedBlock)
+          .setRewriteMs(System.currentTimeMillis()).setTermStartMs(tm.getTermStartMs))
+      }
+      newterm.setTermEndMs(DConfig.DTV_TIME_MS_EACH_BLOCK * mineBlockCount);
+
+      newterm.setTermId(tm.getTermId + 1)
+        .setLastTermId(tm.getTermId)
+        .setLastTermUid(tm.getSign)
+        .setSign(msgid)
+
+      val rand = Math.random() * 1000
+      val rdns = scala.util.Random.shuffle(quantifyminers);
+      //      log.debug(" rdns=" + rdns.foldLeft("")((a, b) => a + "," + b._1));
+      var i = newterm.getBlockRange.getStartBlock;
+      var bitcc = BigInt(0);
+
+      while (newterm.getMinerQueueCount < mineBlockCount) {
+        rdns.map { x =>
+          if (newterm.getMinerQueueCount < mineBlockCount) {
+            //              log.debug(" add miner at Queue," + x._2.getCoAddress + ",blockheight=" + i);
+            newterm.addMinerQueue(TermBlock.newBuilder().setBlockHeight(i)
+              .setMinerCoaddr(x._2.getCoAddress))
+            i = i + 1;
+          }
+        }
+      }
+
+      log.debug("try to vote:newterm=" + newterm.getTermId + ",curterm=" + tm.getTermId
+        + ",vN=" + DCtrl.coMinerByUID.size + ",cN=" + conodescount + ",sign=" + newterm.getSign + ",mineQ=" + newterm.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr))
+      DCtrl.instance.vote_Request = newterm;
+      network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), msgid);
+    } else {
+      log.debug("No more quaitify node can vote:");
+    }
   }
 
 }

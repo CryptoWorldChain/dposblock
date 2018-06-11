@@ -54,7 +54,8 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
         if (!StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) {
           cn.synchronized {
             if (StringUtils.equals(pbo.getCoAddress, cn.getCoAddress) || pbo.getBlockHeight > cn.getCurBlock) {
-              if (pbo.getTermId > DCtrl.termMiner().getTermId || DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress, pbo.getMineTime)) {
+              if (pbo.getTermId > DCtrl.termMiner().getTermId || 
+                  DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress, pbo.getMineTime)._1) {
 
                 //              log.debug("newblock: height=" + pbo.getBlockHeight + ",CoAddr=" + pbo.getCoAddress
                 //                + ",T=" + pbo.getTermId + ",CT=" + DCtrl.termMiner().getTermId + ",TU=" + DCtrl.termMiner().getSign
@@ -78,9 +79,10 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
 
                 if (pbo.getTermId > DCtrl.termMiner().getTermId) {
                   log.debug("local term id lower than block:pbot=" + pbo.getTermId + ",tm=" + DCtrl.termMiner().getTermId
-                    + "H=" + pbo.getBlockHeight + ",DBH=" + cn.getCurBlock + ":coadrr=" + pbo.getCoAddress + ",MN=" + DCtrl.coMinerByUID
+                    + ",H=" + pbo.getBlockHeight + ",DBH=" + cn.getCurBlock + ":coadrr=" + pbo.getCoAddress + ",MN=" + DCtrl.coMinerByUID
                     .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size);
-                  BlockSync.tryBackgroundSyncLogs(pbo.getBlockHeight, pbo.getBcuid)(DCtrl.dposNet())
+                  //BlockSync.tryBackgroundSyncLogs(pbo.getBlockHeight, pbo.getBcuid)(DCtrl.dposNet())
+                  //try to revote
                 }
                 //              if (pbo.getBlockHeight > cn.getCurBlock) {
                 //cn.setCurBlock(pbo.getBlockHeight)
@@ -99,7 +101,7 @@ object PDPoSCoinbaseBlockService extends LogHelper with PBUtils with LService[PS
             }
           }
         } else {
-          log.info("newblock:ok,H=" + pbo.getBlockHeight + ",DBH=" + pbo.getBlockHeight + ":Local:coadrr=" + pbo.getCoAddress + ",MN=" + DCtrl.coMinerByUID
+          log.info("newblock:okH=" + pbo.getBlockHeight + ",DBH=" + pbo.getBlockHeight + ":Local=" + pbo.getCoAddress + ",MN=" + DCtrl.coMinerByUID
             .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size)
 
           ret.setResult(CoinbaseResult.CR_PROVEN)
