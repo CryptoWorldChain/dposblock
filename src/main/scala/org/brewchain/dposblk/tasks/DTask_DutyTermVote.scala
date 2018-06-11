@@ -184,7 +184,8 @@ object DTask_DutyTermVote extends LogHelper {
         && System.currentTimeMillis() > ban_for_vote_sec &&
         (cn.getCominerStartBlock +
           Math.min(DConfig.COMINER_WAIT_BLOCKS_TODUTY, (tm.getCoNodes - 1) *
-            DConfig.DTV_MUL_BLOCKS_EACH_TERM) <= cn.getCurBlock)) {
+            DConfig.DTV_MUL_BLOCKS_EACH_TERM) <= cn.getCurBlock)
+          && vq.getTermId <= tm.getTermId + 1) {
 
         val msgid = UUIDGenerator.generate();
         MDCSetMessageID(msgid);
@@ -197,7 +198,7 @@ object DTask_DutyTermVote extends LogHelper {
         }
         DCtrl.coMinerByUID.map(p => {
           if (p._2.getTermId > tm.getTermId) {
-            log.debug("cannot vote");
+            log.debug("cannot vote:termid=" + p._2.getTermId + ",tm.termid=" + tm.getTermId+",vq.termid="+vq.getTermId);
             canvote = false;
           }
         })

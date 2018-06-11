@@ -63,7 +63,7 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
         //
         ret.setTermId(pbo.getTermId)
         ret.setSign(pbo.getSign)
-        ret.setVoteAddress(cn.getCoAddress).setResult(VoteResult.VR_GRANTED)
+        ret.setVoteAddress(cn.getCoAddress)
 
         DTask_DutyTermVote.synchronized({
           if ((StringUtils.isBlank(cn.getDutyUid) || (cn.getDutyUid.equals(pbo.getLastTermUid))
@@ -95,7 +95,7 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
                 false
               }
             }
-
+            val reject = 
             if (pbo.getBlockRange.getStartBlock != tm.getBlockRange.getEndBlock + 1 && tm.getTermId > 0) {
               if (pbo.getRewriteTerm == null) {
                 log.debug("Reject DPos TermVote block not a sequence,cn.duty=" + cn.getDutyUid + ",T=" + pbo.getTermId
@@ -105,6 +105,7 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
                   + ",VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid
                   + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress + ",qsize=" + q.size);
                 ret.setResult(VoteResult.VR_REJECT)
+                true
               } else {
                 //check rewrite
                 val (isMiner, isOverrided) = DCtrl.checkMiner(pbo.getBlockRange.getStartBlock, pbo.getCoAddress, System.currentTimeMillis())
@@ -116,12 +117,16 @@ object PDPoSDutyTermVoteService extends LogHelper with PBUtils with LService[PSD
                     + ",TM=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock
                     + "]");
                   ret.setResult(VoteResult.VR_REJECT)
+                  true
                 } else {
                   //should be voting
+                  false
                 }
               }
+            }else{
+              false
             }
-            if (ret.getResult != VoteResult.VR_REJECT) {
+            if (reject) {
               if (pbo.getTermId == tm.getTermId + 1 && q.size > 0) {
                 log.debug("Reject DPos TermVote Miner not quntified,cn.duty=" + cn.getDutyUid + ",T=" + pbo.getTermId
                   + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
