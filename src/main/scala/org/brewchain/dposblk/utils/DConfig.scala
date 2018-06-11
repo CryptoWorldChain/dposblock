@@ -30,7 +30,7 @@ object DConfig {
 
   val DTV_BEFORE_BLK = prop.get(PROP_DOMAIN + "dtv.before.blk", 5);
 
-  val DTV_TIMEOUT_SEC = prop.get(PROP_DOMAIN + "dtv.timeout.sec", -10);
+  val DTV_TIMEOUT_SEC = prop.get(PROP_DOMAIN + "dtv.timeout.sec", 60);
 
   val DTV_MUL_BLOCKS_EACH_TERM = prop.get(PROP_DOMAIN + "dtv.mul.blocks.each.term", 12);
   val DTV_MAX_SUPER_MINER = prop.get(PROP_DOMAIN + "dtv.max.super.miner", 19);
