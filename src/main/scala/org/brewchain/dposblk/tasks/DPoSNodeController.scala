@@ -105,9 +105,9 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
   }
   def updateTerm() = {
     cur_dnode.setDutyUid(term_Miner.getSign).setDutyStartMs(term_Miner.getTermStartMs)
-      .setDutyEndMs(term_Miner.getTermEndMs)
-    Daos.dposdb.put(
-      DPOS_NODE_DB_TERM,
+    .setDutyEndMs(term_Miner.getTermEndMs)
+    cur_dnode.setTermId(term_Miner.getTermId);
+    Daos.dposdb.put(DPOS_NODE_DB_TERM,
       OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
   }
   def updateBlockHeight(blockHeight: Int) = {

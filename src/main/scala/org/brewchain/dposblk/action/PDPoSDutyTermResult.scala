@@ -53,6 +53,9 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
         MDCSetMessageID(pbo.getMessageId)
         ret.setMessageId(pbo.getMessageId);
         ret.setRetCode(0).setRetMessage("SUCCESS")
+        if(pbo.getRetCode != 0){
+          log.debug("Get Wrong Result:"+pbo);
+        }
         val cn = DCtrl.curDN()
         //        val vq = DCtrl.voteRequest();
         //
@@ -72,7 +75,7 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
             .setExtdata(pbo.toByteString())
             .setInfo(pbo.getSign)
             .setNonce(pbo.getResultValue).build())
-        log.debug("Get DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
+        log.debug("Get DPos Term Vote Result:" + cn.getDutyUid + ",T=" + pbo.getTermId
           + ",sign=" + pbo.getSign + ",VA=" + pbo.getVoteAddress + ",FROM=" + pbo.getBcuid + ",Result=" + pbo.getResult);
         DTask_DutyTermVote.synchronized({
           DTask_DutyTermVote.notifyAll()
