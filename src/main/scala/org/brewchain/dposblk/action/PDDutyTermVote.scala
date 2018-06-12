@@ -68,7 +68,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
 
         DTask_DutyTermVote.synchronized({
           if (
-              (StringUtils.isBlank(tm.getSign) || tm.getSign.equals(pbo.getLastTermUid))&&
+              (StringUtils.isBlank(tm.getSign) || tm.getSign.equals(pbo.getLastTermUid)) &&
 //            && StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
             ((tm.getTermId <= pbo.getLastTermId) && tm.getTermId <= pbo.getTermId - 1
             && (pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock)
@@ -176,12 +176,12 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               //
             }
           } else {
-            log.debug("Reject DPos Term Vote:LastSign=" + cn.getDutyUid + ",T=" + pbo.getTermId
-              + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
+            log.debug("Reject DPos Term Vote:LastSign=" + tm.getSign + ",PT=" + pbo.getTermId
+              + ",VT=" + vq.getTermId + ",PLT=" + pbo.getLastTermId+",T="+tm.getTermId
               + ",PBS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock + "]"
               + ",TBS=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
               + ",VBS=[" + vq.getBlockRange.getStartBlock + "," + vq.getBlockRange.getEndBlock + "]"
-              + ",VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid
+              + ",VM=" + vq.getMessageId + ",PLTU=" + pbo.getLastTermUid+",LTU="+tm.getLastTermUid
               + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress);
             ret.setResult(VoteResult.VR_REJECT)
             ret.setTermId(pbo.getTermId)

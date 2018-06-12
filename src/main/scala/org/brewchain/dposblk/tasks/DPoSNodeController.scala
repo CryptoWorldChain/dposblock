@@ -99,10 +99,10 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
       term_Miner.mergeFrom(termov.getExtdata)
     }
     cur_dnode.setLastTermSign(term_Miner.getLastTermUid)
-    .setTermId(term_Miner.getTermId)
-    .setTermSign(term_Miner.getSign)
-    .setTermStartBlock(term_Miner.getBlockRange.getStartBlock)
-    .setTermEndBlock(term_Miner.getBlockRange.getEndBlock)
+      .setTermId(term_Miner.getTermId)
+      .setTermSign(term_Miner.getSign)
+      .setTermStartBlock(term_Miner.getBlockRange.getStartBlock)
+      .setTermEndBlock(term_Miner.getBlockRange.getEndBlock)
   }
   def syncToDB() {
     Daos.dposdb.put(
@@ -111,14 +111,14 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
   }
   def updateTerm() = {
     cur_dnode.setDutyUid(term_Miner.getSign).setDutyStartMs(term_Miner.getTermStartMs)
-    .setDutyEndMs(term_Miner.getTermEndMs)
-//    cur_dnode.setTermId(term_Miner.getTermId).setl;
+      .setDutyEndMs(term_Miner.getTermEndMs)
+    //    cur_dnode.setTermId(term_Miner.getTermId).setl;
     cur_dnode.setLastTermSign(term_Miner.getLastTermUid)
-    .setTermId(term_Miner.getTermId)
-    .setTermSign(term_Miner.getSign)
-    .setTermStartBlock(term_Miner.getBlockRange.getStartBlock)
-    .setTermEndBlock(term_Miner.getBlockRange.getEndBlock)
-    
+      .setTermId(term_Miner.getTermId)
+      .setTermSign(term_Miner.getSign)
+      .setTermStartBlock(term_Miner.getBlockRange.getStartBlock)
+      .setTermEndBlock(term_Miner.getBlockRange.getEndBlock)
+
     Daos.dposdb.put(DPOS_NODE_DB_TERM,
       OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
   }
@@ -146,7 +146,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
           + ",MN=" + DCtrl.coMinerByUID.size
           + ",RN=" + network.bitenc.bits.bitCount
           + ",CN=" + term_Miner.getCoNodes
-           +",DU=" + cur_dnode.getDutyUid
+          + ",DU=" + cur_dnode.getDutyUid
           + ",VT=" + vote_Request.getTermId
           + ",TM=" + term_Miner.getTermId
           + ",TU=" + term_Miner.getSign
@@ -253,6 +253,15 @@ object DCtrl extends LogHelper {
   def termMiner(): PSDutyTermVote.Builder = instance.term_Miner
   def voteRequest(): PSDutyTermVote.Builder = instance.vote_Request
 
+  def getFastNode(): String = {
+    var fastNode= curDN().build();
+    coMinerByUID.map { f =>
+      if (f._2.getCurBlock > fastNode.getCurBlock) {
+        fastNode = f._2;
+      }
+    }
+    fastNode.getBcuid
+  }
   //  def curTermMiner(): PSDutyTermVoteOrBuilder = instance.term_Miner
 
   def isReady(): Boolean = {
@@ -265,6 +274,13 @@ object DCtrl extends LogHelper {
     if (block > tm.getEndBlock || block < tm.getStartBlock) {
       log.debug("checkMiner:False,block too large:" + block + ",[" + tm.getStartBlock + "," + tm.getEndBlock + "],sign="
         + termMiner.getSign + ",TID=" + termMiner.getTermId)
+      if (block > curDN.getCurBlock) {
+        val fastuid = DCtrl.getFastNode();
+        if(!StringUtils.equals(fastuid, curDN.getBcuid))
+        {
+          BlockSync.tryBackgroundSyncLogs(block, fastuid)(DCtrl.dposNet())
+        }
+      }
       (false, false)
     } else {
       val blkshouldMineMS = (block - tm.getStartBlock + 1) * tm.getEachBlockMs + termMiner().getTermStartMs
@@ -336,15 +352,15 @@ object DCtrl extends LogHelper {
           dposNet().asendMessage("SRTDOB", reqTx, dposNet().directNodeByBcuid.get(miner.getMiner.getBcuid).get, new CallBack[FramePacket] {
             def onSuccess(fp: FramePacket) = {
               try {
-                 val retTx = if (fp.getBody != null) {
+                val retTx = if (fp.getBody != null) {
                   PRetGetTransaction.newBuilder().mergeFrom(fp.getBody);
-                  } else {
-                    null;
-                  }
-                 if (retTx!=null){
-                   log.debug("sync transaction success, hash::" + txHash);
-                   Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(retTx.getTxContent).toBuilder(), false);
-                 }
+                } else {
+                  null;
+                }
+                if (retTx != null) {
+                  log.debug("sync transaction success, hash::" + txHash);
+//  !!                Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(retTx.getTxContent).toBuilder(), false);
+                }
               } finally {
                 log.debug("sync transaction done, hash::" + txHash);
               }

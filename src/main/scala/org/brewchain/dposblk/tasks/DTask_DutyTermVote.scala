@@ -227,7 +227,7 @@ object DTask_DutyTermVote extends LogHelper {
         }
         DCtrl.coMinerByUID.map(p => {
           if (p._2.getTermId > tm.getTermId) {
-            log.debug("cannot vote:termid=" + p._2.getTermId + ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
+            log.debug("cannot vote:termid=" + p._2.getTermId +"->"+p._2.getBcuid+ ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
             canvote = false;
           }
         })
@@ -265,7 +265,7 @@ object DTask_DutyTermVote extends LogHelper {
     val quantifyminers = DCtrl.coMinerByUID.filter(p =>
 
       if (!StringUtils.equals(omitCoaddr, p._2.getCoAddress) &&
-        (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount + 1) &&
+        (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount) &&
           (tm.getLastTermId == p._2.getTermId
             || tm.getTermId == p._2.getTermId) &&
             (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
