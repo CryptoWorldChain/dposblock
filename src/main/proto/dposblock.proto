@@ -21,6 +21,7 @@ enum PCommand {
 	
 	PVR = 7; //PBFT轮训记账投票结果
 	BRT = 8; //同步交易
+	SRT = 9; //同步单笔交易
 	TTT = 30;//ping,pong,wall ,testing
 };
 
@@ -183,6 +184,7 @@ message PBlockEntry{
 	string 	coinbase_bcuid = 2;
 	int32	slice_id = 3;
 	bytes	block_header = 10;
+	bytes 	block_miner = 11;
 	string 	sign = 50;
 }
 
@@ -211,4 +213,14 @@ message PSSyncTransaction {
 message PRetSyncTransaction {
 	int32 ret_code = 1;
 	string ret_message = 2;
+}
+
+message PSGetTransaction {
+	string txHash = 1;
+}
+
+message PRetGetTransaction {
+	int32 ret_code = 1;
+	string ret_message = 2;
+	bytes txContent = 3;	
 }
