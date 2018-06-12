@@ -77,6 +77,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
             .setBlockEntry(PBlockEntry.newBuilder().setBlockHeight(newblockheight)
               .setCoinbaseBcuid(cn.getBcuid).setSliceId(DCtrl.termMiner().getSliceId)
               .setBlockHeader(newblk.build().toByteString())
+              //.setBlockMiner(newblk)
               .setSign("TOLIUBODOSIGN"))
             .setSliceId(DCtrl.termMiner().getSliceId)
 

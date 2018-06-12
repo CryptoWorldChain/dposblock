@@ -59,6 +59,8 @@ object PDPoSTransactionSyncService extends LogHelper with PBUtils with LService[
           ret.clear()
           ret.setRetCode(-3).setRetMessage(t.getMessage)
         }
+      } finally {
+        handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
       }
     }
   }

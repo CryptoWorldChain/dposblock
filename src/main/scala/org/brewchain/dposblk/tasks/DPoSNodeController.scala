@@ -27,7 +27,9 @@ import org.brewchain.dposblk.pbgens.Dposblock.PRetGetTransaction
 import onight.tfw.async.CallBack
 import onight.tfw.otransio.api.beans.FramePacket
 import org.brewchain.evmapi.gens.Tx.MultiTransaction
-import org.brewchain.evmapi.gens.Block.BlockMiner;
+import org.brewchain.evmapi.gens.Block.BlockEntity
+import org.brewchain.evmapi.gens.Block.BlockHeader
+import org.brewchain.evmapi.gens.Block.BlockMiner
 
 import scala.collection.JavaConversions._
 import org.apache.commons.codec.binary.Base64
@@ -318,9 +320,9 @@ object DCtrl extends LogHelper {
         log.debug("must sync transaction first.");
         for (txHash <- res.getTxHashsList) {
           val reqTx = PSGetTransaction.newBuilder().setTxHash(txHash).build();
-          val miner = BlockMiner.parseFrom(b.getBlockMiner);
-          log.debug("sync transaction hash::" + txHash + " block miner::" + miner.getBcuid);
-          dposNet().asendMessage("SRTDOB", reqTx, dposNet().directNodeByBcuid.get(miner.getBcuid).get, new CallBack[FramePacket] {
+          val miner = BlockEntity.parseFrom(b.getBlockHeader);
+          log.debug("sync transaction hash::" + txHash + " block miner::" + miner.getMiner.getBcuid);
+          dposNet().asendMessage("SRTDOB", reqTx, dposNet().directNodeByBcuid.get(miner.getMiner.getBcuid).get, new CallBack[FramePacket] {
             def onSuccess(fp: FramePacket) = {
               try {
                  val retTx = if (fp.getBody != null) {
