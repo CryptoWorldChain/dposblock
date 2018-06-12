@@ -26,6 +26,9 @@ import com.google.protobuf.ByteString
 import org.apache.commons.codec.binary.Hex
 import org.brewchain.dposblk.pbgens.Dposblock.PSDutyTermVote.RewriteTerm
 import org.brewchain.dposblk.pbgens.Dposblock.PDNode
+import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ConcurrentHashMap
 
 //获取其他节点的term和logidx，commitidx
 object DTask_DutyTermVote extends LogHelper {
@@ -50,13 +53,34 @@ object DTask_DutyTermVote extends LogHelper {
             + p.getBcuid)).build()
     }.toArray)
   }
+  val possibleTermID = new ConcurrentHashMap[Long, String]();
+
+  def checkPossibleTerm(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
+    possibleTermID.map(f => {
+      if (DCtrl.coMinerByUID.containsKey(f._2)) {
+        val records = Daos.dposdb.listBySecondKey("D" + f._1);
+        val reclist: Buffer[PDutyTermResult.Builder] = records.get.map { p =>
+          PDutyTermResult.newBuilder().mergeFrom(p.getValue.getExtdata);
+        };
+        val realist = reclist.filter { p => DCtrl.coMinerByUID.containsKey(p.getBcuid) };
+        if (realist.size > 0) {
+            checkVoteDBList(records.get.size(),realist,vq);
+        } else {
+          possibleTermID.remove(f._1);
+        }
+      }
+    })
+    false;
+  }
   def checkVoteDB(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
-    val records = Daos.dposdb.listBySecondKey("D" + vq.getTermId)
+    val records = Daos.dposdb.listBySecondKey("D" + (vq.getTermId match {
+      case 0 => DCtrl.termMiner().getTermId + 1
+      case _ => vq.getTermId
+    }));
     val reclist: Buffer[PDutyTermResult.Builder] = records.get.map { p =>
       PDutyTermResult.newBuilder().mergeFrom(p.getValue.getExtdata);
     };
     val realist = reclist.filter { p => DCtrl.coMinerByUID.containsKey(p.getBcuid) };
-
     log.debug("check db status:B[=" + vq.getBlockRange.getStartBlock + ","
       + vq.getBlockRange.getEndBlock + "],T="
       + vq.getTermId
@@ -64,11 +88,14 @@ object DTask_DutyTermVote extends LogHelper {
       + ",N=" + vq.getCoNodes
       + ",dbsize=" + records.get.size()
       + ",realsize=" + realist.size())
-
+      checkVoteDBList(records.get.size(),realist,vq);
+  }
+  def checkVoteDBList(recordsize:Int,realist: Buffer[PDutyTermResult.Builder],vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
+    
     if (realist.size() == 0) {
       DCtrl.voteRequest().clear()
       false
-    } else if ((records.get.size() + 1) >= vq.getCoNodes * DConfig.VOTE_QUORUM_RATIO / 100
+    } else if ((recordsize + 1) >= vq.getCoNodes * DConfig.VOTE_QUORUM_RATIO / 100
       || (System.currentTimeMillis() - vq.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000)) {
       //      log.debug("try to vote:" + records.get.size());
       val signmap = Map[String, Buffer[PDutyTermResult.Builder]]();
@@ -90,54 +117,56 @@ object DTask_DutyTermVote extends LogHelper {
         val votelist = kv._2
         val dbtempvote = DCtrl.instance.loadVoteReq(sign);
         log.debug("dbtempvote=" + dbtempvote.getSign + ",vid=" + dbtempvote.getTermId + ",TID=" + DCtrl.termMiner().getTermId + ",sign=" + sign + ",size=" + votelist.size);
-        if (!hasConverge && StringUtils.equals(dbtempvote.getSign, sign)) {
+        if (StringUtils.equals(dbtempvote.getSign, sign)) {
           if (dbtempvote.getTermId > DCtrl.termMiner().getTermId) {
-            val result = Votes.vote(votelist).PBFTVote({ p =>
-              Some(p.getResult)
-            }, dbtempvote.getCoNodes) match {
-              case Converge(n) =>
-                //          log.debug("converge:" + n); 
-                if (n == VoteResult.VR_GRANTED) {
-                  log.debug("Vote Granted will be the new terms:T="
-                    + dbtempvote.getTermId
-                    + ",curr=" + DCtrl.curDN().getCoAddress
-                    + ",sign=" + dbtempvote.getSign
-                    + ",N=" + dbtempvote.getCoNodes + ":"
-                    + dbtempvote.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr));
-                  DCtrl.instance.term_Miner = dbtempvote
-                  DCtrl.instance.updateTerm()
-                  hasConverge = true;
-                  true
-                } else if (n == VoteResult.VR_REJECT) {
+            val result = Votes.vote(votelist.filter { p => dbtempvote.getMinerQueueList.filter { x => p.getVoteAddress.equals(x.getMinerCoaddr) }.size > 0 })
+              .PBFTVote({ p =>
+                Some(p.getResult)
+              }, dbtempvote.getCoNodes) match {
+                case Converge(n) =>
+                  //          log.debug("converge:" + n); 
+                  if (n == VoteResult.VR_GRANTED //&& System.currentTimeMillis() - dbtempvote.getTermStartMs < DConfig.MAX_TIMEOUTSEC_FOR_REVOTE
+                    && dbtempvote.getTermStartMs >= DCtrl.instance.term_Miner.getTermStartMs) {
+                    log.debug("Vote Granted will be the new terms:T="
+                      + dbtempvote.getTermId
+                      + ",curr=" + DCtrl.curDN().getCoAddress
+                      + ",sign=" + dbtempvote.getSign
+                      + ",N=" + dbtempvote.getCoNodes + ":"
+                      + dbtempvote.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr));
+                    DCtrl.instance.term_Miner = dbtempvote
+                    DCtrl.instance.updateTerm()
+                    hasConverge = true;
+                    true
+                  } else if (n == VoteResult.VR_REJECT) {
+                    clearRecords(votelist);
+                    if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
+                      banForLocal = true;
+                    }
+                    false
+                  } else {
+                    clearRecords(votelist);
+                    if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
+                      banForLocal = true;
+                    }
+                    false
+                  }
+                case n: Undecisible =>
+                  log.debug("Undecisible:dbsize=" + votelist.size + ",N=" + dbtempvote.getCoNodes);
+                  if (System.currentTimeMillis() - dbtempvote.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
+                    log.debug("clear timeout vote after:" + JodaTimeHelper.secondFromNow(dbtempvote.getTermStartMs))
+                    clearRecords(votelist);
+                  }
+                  false
+                case n: NotConverge =>
                   clearRecords(votelist);
                   if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
                     banForLocal = true;
                   }
                   false
-                } else {
-                  clearRecords(votelist);
-                  if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
-                    banForLocal = true;
-                  }
+                case a @ _ =>
+                  //              clearRecords(votelist);
                   false
-                }
-              case n: Undecisible =>
-                log.debug("Undecisible:dbsize=" + votelist.size + ",N=" + dbtempvote.getCoNodes);
-                if (System.currentTimeMillis() - dbtempvote.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
-                  log.debug("clear timeout vote after:" + JodaTimeHelper.secondFromNow(dbtempvote.getTermStartMs))
-                  clearRecords(votelist);
-                }
-                false
-              case n: NotConverge =>
-                clearRecords(votelist);
-                if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
-                  banForLocal = true;
-                }
-                false
-              case a @ _ =>
-                //              clearRecords(votelist);
-                false
-            }
+              }
             if (result) {
               hasConverge = result
             }
@@ -159,7 +188,7 @@ object DTask_DutyTermVote extends LogHelper {
         + vq.getTermId
         + ",sign=" + vq.getSign
         + ",N=" + vq.getCoNodes
-        + ",dbsize=" + records.get.size())
+        + ",dbsize=" + recordsize)
       false
     }
   }
@@ -171,7 +200,7 @@ object DTask_DutyTermVote extends LogHelper {
       val vq = DCtrl.voteRequest()
       log.debug("dutyvote:vq.tid=" + vq.getTermId + ",B=" + cn.getCurBlock + ",vq[" + vq.getBlockRange.getStartBlock + "," + vq.getBlockRange.getEndBlock + "]"
         + ",tm[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
-        + ",vq.lasttermuid=" + vq.getLastTermUid + ",tm.sign=" + tm.getSign + ",vqsign=" + vq.getSign + ",tid=" + tm.getTermId + ",banVote=" + (System.currentTimeMillis() <= ban_for_vote_sec))
+        + ",vq.lasttermuid=" + vq.getLastTermUid + ",tm.sign=" + tm.getSign + ",vqsign=" + vq.getSign + ",tid=" + tm.getTermId + ",banVote=" + (System.currentTimeMillis() <= ban_for_vote_sec) + ":" + (-1 * JodaTimeHelper.secondIntFromNow(ban_for_vote_sec)))
       if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         && vq.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock
         && vq.getBlockRange.getStartBlock >= cn.getCurBlock
@@ -198,30 +227,33 @@ object DTask_DutyTermVote extends LogHelper {
         }
         DCtrl.coMinerByUID.map(p => {
           if (p._2.getTermId > tm.getTermId) {
-            log.debug("cannot vote:termid=" + p._2.getTermId + ",tm.termid=" + tm.getTermId+",vq.termid="+vq.getTermId);
+            log.debug("cannot vote:termid=" + p._2.getTermId + ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
             canvote = false;
           }
         })
         if (canvote) {
           //      log.debug("try vote new term:");
-          VoteTerm(network);
-          false
+          if (VoteTerm(network)) {
+            false
+          } else {
+            checkVoteDB(vq)
+          }
         } else {
           log.debug("cannot vote Sec=" + JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) + ",DV=" + DConfig.DTV_TIMEOUT_SEC
-            + ",co" + tm.getCoNodes);
-          false
+            + ",co=" + tm.getCoNodes);
+          checkVoteDB(vq)
         }
       } else {
         checkVoteDB(vq)
       }
     })
   }
-  def VoteTerm(implicit network: Network, omitCoaddr: String = "", overridedBlock: Int = 0): Unit = {
+  def VoteTerm(implicit network: Network, omitCoaddr: String = "", overridedBlock: Int = 0): Boolean = {
 
     val msgid = UUIDGenerator.generate();
     MDCSetMessageID(msgid);
     DCtrl.coMinerByUID.filter(p => {
-      network.nodeByBcuid(p._1) == network.noneNode || StringUtils.equals(omitCoaddr, p._2.getCoAddress)
+      network.nodeByBcuid(p._1) == network.noneNode //|| StringUtils.equals(omitCoaddr, p._2.getCoAddress)
     }).map { p =>
       log.debug("remove Node:" + p._1);
       DCtrl.coMinerByUID.remove(p._1);
@@ -233,13 +265,15 @@ object DTask_DutyTermVote extends LogHelper {
     val quantifyminers = DCtrl.coMinerByUID.filter(p =>
 
       if (!StringUtils.equals(omitCoaddr, p._2.getCoAddress) &&
-        (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM - tm.getMinerQueueCount &&
-          (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
-            StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))) {
+        (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount + 1) &&
+          (tm.getLastTermId == p._2.getTermId
+            || tm.getTermId == p._2.getTermId) &&
+            (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
+              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))) {
         true
       } else {
         log.debug("remove unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
-          + ",cn=" + cn.getCurBlock
+          + ",cn=" + cn.getCurBlock + ",TID=" + tm.getTermId + ",LTID=" + tm.getLastTermId + ",PT=" + p._2.getTermId
           + ",pbtsign=" + p._2.getTermSign + ",tmsign=" + tm.getSign + ",lasttmsig=" + tm.getLastTermUid)
         false;
       })
@@ -252,7 +286,7 @@ object DTask_DutyTermVote extends LogHelper {
         .setStartBlock(startBlk)
         .setEndBlock(startBlk + mineBlockCount - 1)
         .setEachBlockMs(DConfig.BLK_EPOCH_MS))
-        .setCoNodes(DCtrl.coMinerByUID.size)
+        .setCoNodes(conodescount)
         .setMessageId(msgid)
         .setCoAddress(DCtrl.instance.cur_dnode.getCoAddress)
         .setCwsGuaranty(DConfig.MAX_CWS_GUARANTY)
@@ -297,8 +331,10 @@ object DTask_DutyTermVote extends LogHelper {
         + ",sec,vN=" + DCtrl.coMinerByUID.size + ",cN=" + conodescount + ",sign=" + newterm.getSign + ",mineQ=" + newterm.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr))
       DCtrl.instance.vote_Request = newterm;
       network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), msgid);
+      true
     } else {
       log.debug("No more quaitify node can vote:");
+      false
     }
   }
 
