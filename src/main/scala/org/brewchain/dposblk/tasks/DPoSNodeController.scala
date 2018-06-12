@@ -84,7 +84,11 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
     } else {
       term_Miner.mergeFrom(termov.getExtdata)
     }
-    cur_dnode
+    cur_dnode.setLastTermSign(term_Miner.getLastTermUid)
+    .setTermId(term_Miner.getTermId)
+    .setTermSign(term_Miner.getSign)
+    .setTermStartBlock(term_Miner.getBlockRange.getStartBlock)
+    .setTermEndBlock(term_Miner.getBlockRange.getEndBlock)
   }
   def syncToDB() {
     Daos.dposdb.put(DPOS_NODE_DB_KEY,
@@ -93,7 +97,13 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
   def updateTerm() = {
     cur_dnode.setDutyUid(term_Miner.getSign).setDutyStartMs(term_Miner.getTermStartMs)
     .setDutyEndMs(term_Miner.getTermEndMs)
-    cur_dnode.setTermId(term_Miner.getTermId);
+//    cur_dnode.setTermId(term_Miner.getTermId).setl;
+    cur_dnode.setLastTermSign(term_Miner.getLastTermUid)
+    .setTermId(term_Miner.getTermId)
+    .setTermSign(term_Miner.getSign)
+    .setTermStartBlock(term_Miner.getBlockRange.getStartBlock)
+    .setTermEndBlock(term_Miner.getBlockRange.getEndBlock)
+    
     Daos.dposdb.put(DPOS_NODE_DB_TERM,
       OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
   }
@@ -117,13 +127,14 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
         continue = false;
         log.info("DCTRL.RunOnce:S=" + cur_dnode.getState + ",B=" + cur_dnode.getCurBlock
           + ",CA=" + cur_dnode.getCoAddress
+          + ",BCUID=" + term_Miner.getBcuid
           + ",MN=" + DCtrl.coMinerByUID.size
           + ",RN=" + network.bitenc.bits.bitCount
           + ",CN=" + term_Miner.getCoNodes
-          + ",TN=" + cur_dnode.getTxcount + ",DU=" + cur_dnode.getDutyUid
+           +",DU=" + cur_dnode.getDutyUid
           + ",VT=" + vote_Request.getTermId
           + ",TM=" + term_Miner.getTermId
-          + ",VU=" + vote_Request.getLastTermUid
+          + ",TU=" + term_Miner.getSign
           + ",NextSec=" + JodaTimeHelper.secondFromNow(cur_dnode.getDutyEndMs)
           + ",SecPass=" + JodaTimeHelper.secondFromNow(cur_dnode.getLastDutyTime));
         cur_dnode.getState match {

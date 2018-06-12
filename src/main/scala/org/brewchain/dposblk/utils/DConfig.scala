@@ -53,8 +53,10 @@ object DConfig {
   val MAX_TNX_EACH_BROADCAST = prop.get(PROP_DOMAIN + "max.tnx.each.broadcast", 100);
 
   val MAX_CWS_GUARANTY = prop.get(PROP_DOMAIN + "max.cws.guaranty", 10);
-  
+
   //高度相同后需要等待多少个term以上才能变成cominer
   val COMINER_WAIT_BLOCKS_TODUTY = prop.get(PROP_DOMAIN + "cominer.wait.blocks.toduty", 60);
+
+  val MAX_POSSIBLE_TERMID = prop.get(PROP_DOMAIN + "max.possible.termid", 100);
 
 }

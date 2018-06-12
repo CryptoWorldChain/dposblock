@@ -85,8 +85,8 @@ object DTask_CoMine extends LogHelper with BitMap {
         })
       }
     cdl.await();
-    log.debug("get nodes:count=" + DCtrl.coMinerByUID.size + ",dposnetNodecount=" + network.directNodeByBcuid.size
-      + ",maxheight=" + fastNode.getCurBlock);
+//    log.debug("get nodes:count=" + DCtrl.coMinerByUID.size + ",dposnetNodecount=" + network.directNodeByBcuid.size
+//      + ",maxheight=" + fastNode.getCurBlock);
     //remove off line
     DCtrl.coMinerByUID.filter(p => {
       network.nodeByBcuid(p._1) == network.noneNode
@@ -94,7 +94,8 @@ object DTask_CoMine extends LogHelper with BitMap {
       log.debug("remove Node:" + p._1);
       DCtrl.coMinerByUID.remove(p._1);
     }
-    if (cn.getCurBlock + DConfig.BLOCK_DISTANCE_COMINE + 1 < DCtrl.termMiner().getBlockRange.getStartBlock) {
+    if (cn.getCurBlock + DConfig.BLOCK_DISTANCE_COMINE + 1 < DCtrl.termMiner().getBlockRange.getStartBlock
+        &&System.currentTimeMillis() < DCtrl.termMiner().getTermEndMs + DConfig.DTV_TIMEOUT_SEC*1000) {
       log.debug("TermBlock large than local:T=[" + DCtrl.termMiner().getBlockRange.getStartBlock + "," + DCtrl.termMiner().getBlockRange.getEndBlock +
         "],DB=" + cn.getCurBlock);
       cn.setState(DNodeState.DN_SYNC_BLOCK)
