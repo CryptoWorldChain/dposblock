@@ -1,6 +1,7 @@
 package org.brewchain.dposblk.tasks
 
 import org.fc.brewchain.p22p.node.Network
+import org.fc.brewchain.p22p.node.Node
 import org.fc.brewchain.p22p.utils.LogHelper
 import org.brewchain.bcapi.gens.Oentity.OValue
 import org.apache.commons.lang3.StringUtils
@@ -19,6 +20,14 @@ import org.brewchain.dposblk.pbgens.Dposblock.PDutyTermResult
 import org.brewchain.dposblk.utils.DConfig
 import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntry
 import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntryOrBuilder
+import org.brewchain.dposblk.pbgens.Dposblock.PSGetTransaction
+import org.brewchain.dposblk.pbgens.Dposblock.PRetGetTransaction
+import org.brewchain.dposblk.pbgens.Dposblock.PSGetTransaction
+import org.brewchain.dposblk.pbgens.Dposblock.PRetGetTransaction
+import onight.tfw.async.CallBack
+import onight.tfw.otransio.api.beans.FramePacket
+import org.brewchain.evmapi.gens.Tx.MultiTransaction
+import org.brewchain.evmapi.gens.Block.BlockMiner;
 
 import scala.collection.JavaConversions._
 import org.apache.commons.codec.binary.Base64
@@ -40,7 +49,8 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
   }
 
   def saveVoteReq(pbo: PSDutyTermVote): Unit = {
-    Daos.dposdb.put("TERM-TEMP-" + pbo.getSign,
+    Daos.dposdb.put(
+      "TERM-TEMP-" + pbo.getSign,
       OValue.newBuilder().setExtdata(pbo.toByteString()).build())
   }
 
@@ -59,7 +69,8 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
       cur_dnode.setBcuid(root_node.bcuid)
         .setCurBlock(1).setCoAddress(root_node.v_address)
         .setBitIdx(root_node.node_idx)
-      Daos.dposdb.put(DPOS_NODE_DB_KEY,
+      Daos.dposdb.put(
+        DPOS_NODE_DB_KEY,
         OValue.newBuilder().setExtdata(cur_dnode.build().toByteString()).build())
     } else {
       cur_dnode.mergeFrom(ov.getExtdata)
@@ -79,7 +90,8 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
 
     val termov = Daos.dposdb.get(DPOS_NODE_DB_TERM).get
     if (termov == null) {
-      Daos.dposdb.put(DPOS_NODE_DB_TERM,
+      Daos.dposdb.put(
+        DPOS_NODE_DB_TERM,
         OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
     } else {
       term_Miner.mergeFrom(termov.getExtdata)
@@ -87,13 +99,15 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
     cur_dnode
   }
   def syncToDB() {
-    Daos.dposdb.put(DPOS_NODE_DB_KEY,
+    Daos.dposdb.put(
+      DPOS_NODE_DB_KEY,
       OValue.newBuilder().setExtdata(cur_dnode.build().toByteString()).build())
   }
   def updateTerm() = {
     cur_dnode.setDutyUid(term_Miner.getSign).setDutyStartMs(term_Miner.getTermStartMs)
-    .setDutyEndMs(term_Miner.getTermEndMs)
-    Daos.dposdb.put(DPOS_NODE_DB_TERM,
+      .setDutyEndMs(term_Miner.getTermEndMs)
+    Daos.dposdb.put(
+      DPOS_NODE_DB_TERM,
       OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
   }
   def updateBlockHeight(blockHeight: Int) = {
@@ -137,30 +151,29 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
                 log.debug("dpos waiting for init:" + n);
                 false
               case x @ _ =>
-                log.debug("not ready:"+x);
+                log.debug("not ready:" + x);
                 false
             }
           case DNodeState.DN_CO_MINER =>
             if (DTask_DutyTermVote.runOnce) {
               continue = true;
               cur_dnode.setState(DNodeState.DN_DUTY_MINER);
-            }else{
+            } else {
               log.debug("cominer run false:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
                 + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId
                 + ",vqlid=" + DCtrl.voteRequest().getLastTermId + ",tid=" + term_Miner.getTermId
                 + ",tq[" + term_Miner.getBlockRange.getStartBlock + "," + term_Miner.getBlockRange.getEndBlock + "]");
             }
           case DNodeState.DN_DUTY_MINER =>
-            if(term_Miner.getBlockRange.getStartBlock > cur_dnode.getCurBlock + term_Miner.getMinerQueueCount){
+            if (term_Miner.getBlockRange.getStartBlock > cur_dnode.getCurBlock + term_Miner.getMinerQueueCount) {
               log.debug("cur term force to resync block:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
                 + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId
                 + ",vqlid=" + DCtrl.voteRequest().getLastTermId + ",tid=" + term_Miner.getTermId
                 + ",tq[" + term_Miner.getBlockRange.getStartBlock + "," + term_Miner.getBlockRange.getEndBlock + "]");
               continue = true;
               cur_dnode.setState(DNodeState.DN_SYNC_BLOCK);
-            }else
-            if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock //|| DCtrl.voteRequest().getLastTermId >= term_Miner.getTermId
-              ) {
+            } else if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock //|| DCtrl.voteRequest().getLastTermId >= term_Miner.getTermId
+            ) {
               log.debug("cur term force to end:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
                 + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId
                 + ",vqlid=" + DCtrl.voteRequest().getLastTermId + ",tid=" + term_Miner.getTermId
@@ -195,7 +208,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
                   DTask_DutyTermVote.wait(sleept)
                 });
                 true
-              }else{
+              } else {
                 false;
               }
             }
@@ -234,12 +247,12 @@ object DCtrl extends LogHelper {
       instance.cur_dnode.getStateValue > DNodeState.DN_INIT_VALUE
   }
 
-  def checkMiner(block: Int, coaddr: String, mineTime: Long, maxWaitMS: Long = 1L): (Boolean,Boolean) = {
+  def checkMiner(block: Int, coaddr: String, mineTime: Long, maxWaitMS: Long = 1L): (Boolean, Boolean) = {
     val tm = termMiner().getBlockRange;
     if (block > tm.getEndBlock || block < tm.getStartBlock) {
       log.debug("checkMiner:False,block too large:" + block + ",[" + tm.getStartBlock + "," + tm.getEndBlock + "],sign="
         + termMiner.getSign + ",TID=" + termMiner.getTermId)
-      (false,false)
+      (false, false)
     } else {
       val blkshouldMineMS = (block - tm.getStartBlock + 1) * tm.getEachBlockMs + termMiner().getTermStartMs
       val realblkMineMS = mineTime;
@@ -251,20 +264,20 @@ object DCtrl extends LogHelper {
               log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockMS=" + tm.getEachBlockMs + ",TermLeft=" + termblockLeft
                 + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign + ",bh=" + block);
               Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
-            }  
-            (true,false)
+            }
+            (true, false)
           } else {
             if (realblkMineMS > blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) {
               minerByBlockHeight(block + ((realblkMineMS - blkshouldMineMS) / DConfig.MAX_WAIT_BLK_EPOCH_MS).asInstanceOf[Int]) match {
                 case Some(nn) =>
                   log.debug("Override miner for Next:check:" + blkshouldMineMS + ",realblkmine=" + realblkMineMS + ",n=" + n
                     + ",next=" + nn + ",coaddr=" + coaddr + ",block=" + (block) + ",TermLeft=" + termblockLeft + ",Result=" + coaddr.equals(nn)
-                    + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign);//try to revote.
-                  (coaddr.equals(nn),true)
+                    + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign); //try to revote.
+                  (coaddr.equals(nn), true)
                 case None =>
                   log.debug("wait for Miner:Should=" + blkshouldMineMS + ",Real=" + realblkMineMS + ",eachBlockMS=" + tm.getEachBlockMs + ",TermLeft=" + termblockLeft
                     + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign);
-                  (false,true)
+                  (false, true)
               }
             } else {
               //              log.debug("wait for timeout to Mine:ShouldT=" + (blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) + ",realblkmine=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockSec
@@ -272,7 +285,7 @@ object DCtrl extends LogHelper {
               if (realblkMineMS < blkshouldMineMS) {
                 Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
               }
-              (false,false)
+              (false, false)
             }
 
           }
@@ -281,7 +294,7 @@ object DCtrl extends LogHelper {
             //            log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockSec + ",TermLeft=" + termblockLeft);
             Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
           }
-          (false,false)
+          (false, false)
       }
     }
   }
@@ -301,9 +314,34 @@ object DCtrl extends LogHelper {
   def saveBlock(b: PBlockEntryOrBuilder): Int = {
     if (!b.getCoinbaseBcuid.equals(DCtrl.curDN().getBcuid)) {
       val res = Daos.blkHelper.ApplyBlock(b.getBlockHeader);
-//      if (res.getTxHashsCount > 0) {
-//        // 
-//      }
+      if (res.getTxHashsCount > 0) {
+        log.debug("must sync transaction first.");
+        for (txHash <- res.getTxHashsList) {
+          val reqTx = PSGetTransaction.newBuilder().setTxHash(txHash).build();
+          val miner = BlockMiner.parseFrom(b.getBlockMiner);
+          log.debug("sync transaction hash::" + txHash + " block miner::" + miner.getBcuid);
+          dposNet().asendMessage("SRTDOB", reqTx, dposNet().directNodeByBcuid.get(miner.getBcuid).get, new CallBack[FramePacket] {
+            def onSuccess(fp: FramePacket) = {
+              try {
+                 val retTx = if (fp.getBody != null) {
+                  PRetGetTransaction.newBuilder().mergeFrom(fp.getBody);
+                  } else {
+                    null;
+                  }
+                 if (retTx!=null){
+                   log.debug("sync transaction success, hash::" + txHash);
+                   Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(retTx.getTxContent).toBuilder(), false);
+                 }
+              } finally {
+                log.debug("sync transaction done, hash::" + txHash);
+              }
+            }
+            def onFailed(e: java.lang.Exception, fp: FramePacket) {
+              log.debug("sync transaction error::" + e.getMessage, e)
+            }
+          })
+        }
+      }
       if (res.getCurrentNumber > 0) {
         DCtrl.instance.updateBlockHeight(res.getCurrentNumber)
         res.getCurrentNumber
