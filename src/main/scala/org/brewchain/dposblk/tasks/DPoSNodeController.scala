@@ -359,7 +359,7 @@ object DCtrl extends LogHelper {
                 }
                 if (retTx != null) {
                   log.debug("sync transaction success, hash::" + txHash);
-//  !!                Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(retTx.getTxContent).toBuilder(), false);
+                  Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(retTx.getTxContent).toBuilder(), false);
                 }
               } finally {
                 log.debug("sync transaction done, hash::" + txHash);
