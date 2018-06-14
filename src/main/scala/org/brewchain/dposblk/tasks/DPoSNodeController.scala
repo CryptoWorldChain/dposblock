@@ -124,7 +124,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
       OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
   }
   def updateBlockHeight(blockHeight: Int) = {
-    cur_dnode.synchronized({
+    Daos.blkHelper.synchronized({
       //      if (cur_dnode.getCurBlock < blockHeight) {
       cur_dnode.setLastBlockTime(System.currentTimeMillis())
       cur_dnode.setCurBlock(blockHeight)
