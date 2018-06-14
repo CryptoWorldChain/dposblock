@@ -90,7 +90,7 @@ object PDCoinbase extends LogHelper with PBUtils with LService[PSCoinbase] with 
             }
           }
         } else {
-          log.info("newblock:ok,H=" + pbo.getBlockHeight + ",DBH=" + pbo.getBlockHeight + ":Local=" + pbo.getCoAddress + ",MN=" + DCtrl.coMinerByUID
+          log.info("newblock:ok,H=" + pbo.getBlockHeight + ",DB=" + pbo.getBlockHeight + ":Local=" + pbo.getCoAddress + ",MN=" + DCtrl.coMinerByUID
             .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size+",CN="+DCtrl.termMiner().getCoNodes)
           ret.setResult(CoinbaseResult.CR_PROVEN)
         }

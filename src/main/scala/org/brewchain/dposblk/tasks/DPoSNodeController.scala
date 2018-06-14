@@ -274,11 +274,12 @@ object DCtrl extends LogHelper {
     if (block > tm.getEndBlock || block < tm.getStartBlock) {
       log.debug("checkMiner:False,block too large:" + block + ",[" + tm.getStartBlock + "," + tm.getEndBlock + "],sign="
         + termMiner.getSign + ",TID=" + termMiner.getTermId)
-      if (block > curDN.getCurBlock) {
+        val maxblk=Math.max(block,tm.getEndBlock)
+      if (maxblk > curDN.getCurBlock) {
         val fastuid = DCtrl.getFastNode();
         if(!StringUtils.equals(fastuid, curDN.getBcuid))
         {
-          BlockSync.tryBackgroundSyncLogs(block, fastuid)(DCtrl.dposNet())
+          BlockSync.tryBackgroundSyncLogs(maxblk, fastuid)(DCtrl.dposNet())
         }
       }
       (false, false)
@@ -359,7 +360,7 @@ object DCtrl extends LogHelper {
                 }
                 if (retTx != null) {
                   log.debug("sync transaction success, hash::" + txHash);
-//  !!                Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(retTx.getTxContent).toBuilder(), false);
+                  Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(retTx.getTxContent).toBuilder(), false);
                 }
               } finally {
                 log.debug("sync transaction done, hash::" + txHash);
