@@ -71,7 +71,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               (StringUtils.isBlank(tm.getSign) || tm.getSign.equals(pbo.getLastTermUid)) &&
 //            && StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
             ((tm.getTermId <= pbo.getLastTermId) && tm.getTermId <= pbo.getTermId - 1
-            && (pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock)
+              && (pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getStartBlock)
             || StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) && pbo.getMinerQueueCount > 0) {
             //check quantifyminers
             val quantifyMinerByCoAddr = Map[String, PDNode]();
@@ -176,7 +176,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               //
             }
           } else {
-            log.debug("Reject DPos Term Vote:LastSign=" + tm.getSign + ",PT=" + pbo.getTermId
+            log.debug("Reject DPos Term Vote: TM=" + tm.getSign + ",PT=" + pbo.getTermId
               + ",VT=" + vq.getTermId + ",PLT=" + pbo.getLastTermId+",T="+tm.getTermId
               + ",PBS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock + "]"
               + ",TBS=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"

@@ -34,6 +34,7 @@ import org.brewchain.evmapi.gens.Block.BlockMiner
 import scala.collection.JavaConversions._
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.binary.Hex
+import org.brewchain.account.util.ByteUtil
 
 //投票决定当前的节点
 case class DPosNodeController(network: Network) extends SRunner with LogHelper {
@@ -254,7 +255,7 @@ object DCtrl extends LogHelper {
   def voteRequest(): PSDutyTermVote.Builder = instance.vote_Request
 
   def getFastNode(): String = {
-    var fastNode= curDN().build();
+    var fastNode = curDN().build();
     coMinerByUID.map { f =>
       if (f._2.getCurBlock > fastNode.getCurBlock) {
         fastNode = f._2;
@@ -274,11 +275,10 @@ object DCtrl extends LogHelper {
     if (block > tm.getEndBlock || block < tm.getStartBlock) {
       log.debug("checkMiner:False,block too large:" + block + ",[" + tm.getStartBlock + "," + tm.getEndBlock + "],sign="
         + termMiner.getSign + ",TID=" + termMiner.getTermId)
-        val maxblk=Math.max(block,tm.getEndBlock)
+      val maxblk = Math.max(block, tm.getEndBlock)
       if (maxblk > curDN.getCurBlock) {
         val fastuid = DCtrl.getFastNode();
-        if(!StringUtils.equals(fastuid, curDN.getBcuid))
-        {
+        if (!StringUtils.equals(fastuid, curDN.getBcuid)) {
           BlockSync.tryBackgroundSyncLogs(maxblk, fastuid)(DCtrl.dposNet())
         }
       }
@@ -341,43 +341,62 @@ object DCtrl extends LogHelper {
       None
     }
   }
+  def createNewBlock(txc: Int): BlockEntity.Builder = {
+    Daos.blkHelper.synchronized({
+      val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock,
+        ByteUtil.EMPTY_BYTE_ARRAY, ByteUtil.EMPTY_BYTE_ARRAY);
+      val newblockheight = curDN().getCurBlock + 1
+      if (newblk == null || newblk.getHeader == null) {
+        log.debug("new block header is null: ch=" + newblockheight + ",dbh=" + newblk);
+        null
+      } else if (newblockheight != newblk.getHeader.getNumber) {
+        log.debug("mining error: ch=" + newblockheight + ",dbh=" + newblk.getHeader.getNumber);
+        null
+      } else {
+        newblk
+      }
+    })
+
+  }
   def saveBlock(b: PBlockEntryOrBuilder): Int = {
     if (!b.getCoinbaseBcuid.equals(DCtrl.curDN().getBcuid)) {
-      val res = Daos.blkHelper.ApplyBlock(b.getBlockHeader);
-      if (res.getTxHashsCount > 0) {
-        log.debug("must sync transaction first.");
-        for (txHash <- res.getTxHashsList) {
-          val reqTx = PSGetTransaction.newBuilder().setTxHash(txHash).build();
-          val miner = BlockEntity.parseFrom(b.getBlockHeader);
-          log.debug("sync transaction hash::" + txHash + " block miner::" + miner.getMiner.getBcuid);
-          dposNet().asendMessage("SRTDOB", reqTx, dposNet().directNodeByBcuid.get(miner.getMiner.getBcuid).get, new CallBack[FramePacket] {
-            def onSuccess(fp: FramePacket) = {
-              try {
-                val retTx = if (fp.getBody != null) {
-                  PRetGetTransaction.newBuilder().mergeFrom(fp.getBody);
-                } else {
-                  null;
+      Daos.blkHelper.synchronized({
+        val res = Daos.blkHelper.ApplyBlock(b.getBlockHeader);
+        if (res.getTxHashsCount > 0) {
+          log.debug("must sync transaction first.");
+          for (txHash <- res.getTxHashsList) {
+            val reqTx = PSGetTransaction.newBuilder().setTxHash(txHash).build();
+            val miner = BlockEntity.parseFrom(b.getBlockHeader);
+            log.debug("sync transaction hash::" + txHash + " block miner::" + miner.getMiner.getBcuid);
+            dposNet().asendMessage("SRTDOB", reqTx, dposNet().directNodeByBcuid.get(miner.getMiner.getBcuid).get, new CallBack[FramePacket] {
+              def onSuccess(fp: FramePacket) = {
+                try {
+                  val retTx = if (fp.getBody != null) {
+                    PRetGetTransaction.newBuilder().mergeFrom(fp.getBody);
+                  } else {
+                    null;
+                  }
+                  if (retTx != null) {
+                    log.debug("sync transaction success, hash::" + txHash);
+                    Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(retTx.getTxContent).toBuilder(), false);
+                  }
+                } finally {
+                  log.debug("sync transaction done, hash::" + txHash);
                 }
-                if (retTx != null) {
-                  log.debug("sync transaction success, hash::" + txHash);
-                  Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(retTx.getTxContent).toBuilder(), false);
-                }
-              } finally {
-                log.debug("sync transaction done, hash::" + txHash);
               }
-            }
-            def onFailed(e: java.lang.Exception, fp: FramePacket) {
-              log.debug("sync transaction error::" + e.getMessage, e)
-            }
-          })
+              def onFailed(e: java.lang.Exception, fp: FramePacket) {
+                log.debug("sync transaction error::" + e.getMessage, e)
+              }
+            })
+          }
         }
-      }
-      if (res.getCurrentNumber > 0) {
-        DCtrl.instance.updateBlockHeight(res.getCurrentNumber)
-        res.getCurrentNumber
-      } else {
-        res.getCurrentNumber
-      }
+        if (res.getCurrentNumber > 0) {
+          DCtrl.instance.updateBlockHeight(res.getCurrentNumber)
+          res.getCurrentNumber
+        } else {
+          res.getCurrentNumber
+        }
+      })//synchronized
     } else {
       DCtrl.instance.updateBlockHeight(b.getBlockHeight)
       b.getBlockHeight
