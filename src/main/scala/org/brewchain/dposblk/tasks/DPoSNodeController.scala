@@ -35,6 +35,7 @@ import scala.collection.JavaConversions._
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.binary.Hex
 import org.brewchain.account.util.ByteUtil
+import java.util.concurrent.TimeUnit
 
 //投票决定当前的节点
 case class DPosNodeController(network: Network) extends SRunner with LogHelper {
@@ -160,6 +161,7 @@ case class DPosNodeController(network: Network) extends SRunner with LogHelper {
             continue = DTask_CoMine.runOnce match {
               case n: PDNode if n == cur_dnode =>
                 log.debug("dpos cominer init ok:" + n);
+                Scheduler.scheduleWithFixedDelay(DTask_HeatBeat(), 60, DConfig.HEATBEAT_TICK_SEC, TimeUnit.SECONDS);
                 true;
               case n: PDNode if !n.equals(cur_dnode) =>
                 log.debug("dpos waiting for init:" + n);
