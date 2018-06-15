@@ -63,16 +63,4 @@ object Scheduler extends OLog {
 
     })
   }
-  def main(args: Array[String]): Unit = {
-    Scheduler.updateRunner("grp1", "abc", new Runnable {
-      def run() = {
-        println("running::" + System.currentTimeMillis())
-      }
-    }, 1);
-
-    Thread.sleep(10000);
-    Scheduler.updateRunner("grp1", "abc", null, -1);
-    Thread.sleep(10000);
-    Scheduler.shutdown()
-  }
 }
