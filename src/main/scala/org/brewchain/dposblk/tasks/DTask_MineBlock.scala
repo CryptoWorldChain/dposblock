@@ -51,8 +51,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
         false;
       } else if (isMyBlock) {
         MDCSetBCUID(network)
-        val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock,
-          ByteUtil.EMPTY_BYTE_ARRAY, ByteUtil.EMPTY_BYTE_ARRAY);
+        val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock,"")
         val newblockheight = cn.getCurBlock + 1
         if (newblk == null || newblk.getHeader == null) {
           log.debug("new block header is null: ch=" + newblockheight + ",dbh=" + newblk);
@@ -63,8 +62,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
         } else {
           //        log.debug("MineNewBlock:" + newblk);
           log.debug("mining check ok :new block=" + newblockheight + ",CO=" + cn.getCoAddress
-            + ",MaxTnx=" + DCtrl.termMiner().getMaxTnxEachBlock + ",hash=" +
-            Hex.encodeHexString(newblk.getHeader.getBlockHash.toByteArray()));
+            + ",MaxTnx=" + DCtrl.termMiner().getMaxTnxEachBlock + ",hash=" + newblk.getHeader.getBlockHash);
           val newCoinbase = PSCoinbase.newBuilder()
             .setBlockHeight(newblockheight).setCoAddress(cn.getCoAddress)
             .setTermId(DCtrl.termMiner().getTermId)

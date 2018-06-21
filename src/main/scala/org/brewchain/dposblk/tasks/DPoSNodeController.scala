@@ -394,7 +394,7 @@ object DCtrl extends LogHelper {
       //          .setSliceId(blk.getHeader.getSliceId.asInstanceOf[Int])
       //          .setCoinbaseBcuid(blk.getMiner.getAddress)
       log.debug("load block ok =" + block + ",S=" + blk.getHeader.getSliceId + ",CB=" + blk.getMiner.getBcuid
-        + ",sign=" + Hex.encodeHexString(blk.getHeader.getBlockHash.toByteArray()))
+        + ",sign=" + blk.getHeader.getBlockHash)
       b
     } else {
       log.debug("blk not found in AccountDB:" + block);
