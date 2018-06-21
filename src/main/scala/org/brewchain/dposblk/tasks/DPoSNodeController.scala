@@ -345,8 +345,7 @@ object DCtrl extends LogHelper {
   }
   def createNewBlock(txc: Int): BlockEntity.Builder = {
     Daos.blkHelper.synchronized({
-      val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock,
-        ByteUtil.EMPTY_BYTE_ARRAY, ByteUtil.EMPTY_BYTE_ARRAY);
+      val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock, "");
       val newblockheight = curDN().getCurBlock + 1
       if (newblk == null || newblk.getHeader == null) {
         log.debug("new block header is null: ch=" + newblockheight + ",dbh=" + newblk);
