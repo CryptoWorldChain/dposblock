@@ -67,23 +67,25 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
         ret.setVoteAddress(cn.getCoAddress)
 
         DTask_DutyTermVote.synchronized({
-          if (
-              (StringUtils.isBlank(tm.getSign) || tm.getSign.equals(pbo.getLastTermUid)) &&
-//            && StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
+          if ((StringUtils.isBlank(tm.getSign) || tm.getSign.equals(pbo.getLastTermUid)) &&
+            //            && StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
             ((tm.getTermId <= pbo.getLastTermId) && tm.getTermId <= pbo.getTermId - 1
-            && (pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock)
-            || StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) && pbo.getMinerQueueCount > 0) {
+              && (
+                (pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getStartBlock && pbo.getRewriteTerm != null &&
+                  pbo.getRewriteTerm.getBlockLost > 0)//for revote
+                  || pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock)// for continue vote
+                  || StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) && pbo.getMinerQueueCount > 0) {
             //check quantifyminers
             val quantifyMinerByCoAddr = Map[String, PDNode]();
             DCtrl.coMinerByUID.filter(p =>
-              if (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount+1) &&
-                (tm.getTermId == p._2.getTermId || p._2.getTermId==tm.getLastTermId)&&
+              if (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount + 1) &&
+                (tm.getTermId == p._2.getTermId || p._2.getTermId == tm.getLastTermId) &&
                 (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
                   StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))) {
                 true
               } else {
                 log.debug("unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
-                  + ",cn=" + cn.getCurBlock+",PID"+p._2.getTermId+",TID="+tm.getTermId+",LTID="+tm.getLastTermId
+                  + ",cn=" + cn.getCurBlock + ",PID" + p._2.getTermId + ",TID=" + tm.getTermId + ",LTID=" + tm.getLastTermId
                   + ",pbtsign=" + p._2.getTermSign + ",tmsign=" + tm.getSign + ",lasttmsig=" + tm.getLastTermUid)
                 false;
               }).map(f =>
@@ -176,12 +178,12 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               //
             }
           } else {
-            log.debug("Reject DPos Term Vote:LastSign=" + tm.getSign + ",PT=" + pbo.getTermId
-              + ",VT=" + vq.getTermId + ",PLT=" + pbo.getLastTermId+",T="+tm.getTermId
+            log.debug("Reject DPos Term Vote: TM=" + tm.getSign + ",PT=" + pbo.getTermId
+              + ",VT=" + vq.getTermId + ",PLT=" + pbo.getLastTermId + ",T=" + tm.getTermId
               + ",PBS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock + "]"
               + ",TBS=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
               + ",VBS=[" + vq.getBlockRange.getStartBlock + "," + vq.getBlockRange.getEndBlock + "]"
-              + ",VM=" + vq.getMessageId + ",PLTU=" + pbo.getLastTermUid+",LTU="+tm.getLastTermUid
+              + ",VM=" + vq.getMessageId + ",PLTU=" + pbo.getLastTermUid + ",LTU=" + tm.getLastTermUid
               + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress);
             ret.setResult(VoteResult.VR_REJECT)
             ret.setTermId(pbo.getTermId)

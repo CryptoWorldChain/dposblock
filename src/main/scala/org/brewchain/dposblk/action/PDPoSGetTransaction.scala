@@ -44,7 +44,7 @@ object PDPoSGetTransactionService extends LogHelper with PBUtils with LService[P
       handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
     } else {
       try{
-        val tx = Daos.txHelper.GetTransaction(Daos.enc.hexDec(pbo.getTxHash))
+        val tx = Daos.txHelper.GetTransaction(pbo.getTxHash)
         ret.setTxContent(ByteString.copyFrom(tx.toByteArray()));
         ret.setRetCode(1)
       }

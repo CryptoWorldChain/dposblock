@@ -80,7 +80,8 @@ object DTask_DutyTermVote extends LogHelper {
     val reclist: Buffer[PDutyTermResult.Builder] = records.get.map { p =>
       PDutyTermResult.newBuilder().mergeFrom(p.getValue.getExtdata);
     };
-    val realist = reclist.filter { p => DCtrl.coMinerByUID.containsKey(p.getBcuid) };
+    val realist = reclist.filter { p => 
+      DCtrl.coMinerByUID.containsKey(p.getBcuid) };
     log.debug("check db status:B[=" + vq.getBlockRange.getStartBlock + ","
       + vq.getBlockRange.getEndBlock + "],T="
       + vq.getTermId
@@ -94,6 +95,7 @@ object DTask_DutyTermVote extends LogHelper {
     
     if (realist.size() == 0) {
       DCtrl.voteRequest().clear()
+      checkPossibleTerm(vq);
       false
     } else if ((recordsize + 1) >= vq.getCoNodes * DConfig.VOTE_QUORUM_RATIO / 100
       || (System.currentTimeMillis() - vq.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000)) {
