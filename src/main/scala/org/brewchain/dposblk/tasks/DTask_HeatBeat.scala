@@ -19,9 +19,11 @@ import org.brewchain.dposblk.pbgens.Dposblock.PSCoMine
 import org.brewchain.dposblk.pbgens.Dposblock.PRetCoMine
 import org.brewchain.dposblk.pbgens.Dposblock.PDNodeOrBuilder
 import org.brewchain.dposblk.pbgens.Dposblock.DNodeState
+import org.brewchain.bcapi.exec.SRunner
+import org.fc.brewchain.p22p.action.PMNodeHelper
 
 //获取其他节点的term和logidx，commitidx
-case class DTask_HeatBeat() extends SRunner with LogHelper {
+case class DTask_HeatBeat() extends SRunner with PMNodeHelper with LogHelper {
   def getName(): String = "HeatBeat-Dpos"
 
   def runOnce() = {

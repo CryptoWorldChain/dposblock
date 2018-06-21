@@ -15,11 +15,13 @@ import org.brewchain.dposblk.pbgens.Dposblock.PSSyncBlocks
 import org.brewchain.dposblk.pbgens.Dposblock.PRetSyncBlocks
 import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntry
 import org.brewchain.dposblk.Daos
+import org.fc.brewchain.p22p.action.PMNodeHelper
+import org.brewchain.bcapi.exec.SRunner
 
 //获取其他节点的term和logidx，commitidx
 case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
-    network: Network, fastNodeID: String,
-    runCounter: AtomicLong) extends SRunner with LogHelper {
+    network: Network, fastNodeID: String, 
+    runCounter: AtomicLong) extends SRunner with PMNodeHelper with LogHelper {
   def getName(): String = "SyncBlock:" + startIdx + "-" + (endIdx)
 
   def runOnce() = {
