@@ -347,8 +347,7 @@ object DCtrl extends LogHelper {
   }
   def createNewBlock(txc: Int): BlockEntity.Builder = {
     Daos.blkHelper.synchronized({
-      val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock,
-        ByteUtil.EMPTY_BYTE_ARRAY, ByteUtil.EMPTY_BYTE_ARRAY);
+      val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock, "");
       val newblockheight = curDN().getCurBlock + 1
       if (newblk == null || newblk.getHeader == null) {
         log.debug("new block header is null: ch=" + newblockheight + ",dbh=" + newblk);
@@ -419,7 +418,7 @@ object DCtrl extends LogHelper {
       //          .setSliceId(blk.getHeader.getSliceId.asInstanceOf[Int])
       //          .setCoinbaseBcuid(blk.getMiner.getAddress)
       log.debug("load block ok =" + block + ",S=" + blk.getHeader.getSliceId + ",CB=" + blk.getMiner.getBcuid
-        + ",sign=" + Hex.encodeHexString(blk.getHeader.getBlockHash.toByteArray()))
+        + ",sign=" + blk.getHeader.getBlockHash)
       b
     } else {
       log.debug("blk not found in AccountDB:" + block);
