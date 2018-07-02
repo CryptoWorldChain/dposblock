@@ -63,7 +63,7 @@ object PDCoinbase extends LogHelper with PBUtils with LService[PSCoinbase] with 
                     ret.setResult(CoinbaseResult.CR_PROVEN)
                     log.info("newblock:UU,H=" + pbo.getBlockHeight + ",DB=" + n + ":coadr=" + pbo.getCoAddress + ",MN=" + DCtrl.coMinerByUID
                       .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size+",CN="+DCtrl.termMiner().getCoNodes);
-                    BlockSync.tryBackgroundSyncLogs(pbo.getBlockHeight, pbo.getBcuid)(DCtrl.dposNet())
+                    BlockSync.tryBackgroundSyncLogs(  pbo.getBlockHeight, pbo.getBcuid)(DCtrl.dposNet())
                   case n if n > 0 =>
                     log.info("newblock:OK,H=" + pbo.getBlockHeight + ",DB=" + n + ":coadr=" + pbo.getCoAddress + ",MN=" + DCtrl.coMinerByUID
                       .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size+",CN="+DCtrl.termMiner().getCoNodes)
