@@ -74,7 +74,7 @@ object PDPoSBlockSyncService extends LogHelper with PBUtils with LService[PSSync
         case t: Throwable => {
           log.error("error:", t);
           ret.clear()
-          ret.setRetCode(-3).setRetMessage(t.getMessage)
+          ret.setRetCode(-3)
         }
       } finally {
         handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
