@@ -78,10 +78,12 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
             //check quantifyminers
             val quantifyMinerByCoAddr = Map[String, PDNode]();
             DCtrl.coMinerByUID.filter(p =>
-              if (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount + 1) &&
+              if (//p._2.getBcuid.equals(cn.getBcuid) ||// for local ok
+                  (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount + 1) &&
                 (tm.getTermId == p._2.getTermId || p._2.getTermId == tm.getLastTermId) &&
                 (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
-                  StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))) {
+                  StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))
+                  ) {
                 true
               } else {
                 log.debug("unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
@@ -135,7 +137,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
 
             if (!reject) {
               if (pbo.getTermId == tm.getTermId + 1 && q.size > 0) {
-                log.debug("Reject DPos TermVote Miner not quntified,cn.duty=" + cn.getDutyUid + ",T=" + pbo.getTermId
+                log.debug("Reject DPos TermVote Miner not quntified,cn.duty=" + cn.getDutyUid + ",PT=" + pbo.getTermId
                   + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
                   + ",TU=" + tm.getSign + ",LTM=" + tm.getLastTermUid
                   + ",PU=" + pbo.getSign + ",PTM=" + pbo.getLastTermUid
@@ -178,17 +180,19 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               //
             }
           } else {
-            log.debug("Reject DPos Term Vote: TM=" + tm.getSign + ",PT=" + pbo.getTermId
-              + ",VT=" + vq.getTermId + ",PLT=" + pbo.getLastTermId + ",T=" + tm.getTermId
-              + ",PBS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock + "]"
-              + ",TBS=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
-              + ",VBS=[" + vq.getBlockRange.getStartBlock + "," + vq.getBlockRange.getEndBlock + "]"
-              + ",VM=" + vq.getMessageId + ",PLTU=" + pbo.getLastTermUid + ",LTU=" + tm.getLastTermUid
-              + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress + ",ReWrite=" +
-              pbo.getRewriteTerm match {
-                case n if n != null => "["+pbo.getRewriteTerm.getBlockLost+","+pbo.getRewriteTerm.getRewriteMs
-                case _ => "null"
-              });
+            val nfino = if (pbo.getRewriteTerm != null) {
+              "[" + pbo.getRewriteTerm.getBlockLost + "," + pbo.getRewriteTerm.getRewriteMs+"]"
+            } else {
+              "null";
+            }
+              log.debug("Reject DPos Term Vote: TM=" + tm.getSign + ",PT=" + pbo.getTermId
+                + ",VT=" + vq.getTermId + ",PLT=" + pbo.getLastTermId + ",T=" + tm.getTermId
+                + ",PBS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock + "]"
+                + ",TBS=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
+                + ",VBS=[" + vq.getBlockRange.getStartBlock + "," + vq.getBlockRange.getEndBlock + "]"
+                + ",VM=" + vq.getMessageId + ",PLTU=" + pbo.getLastTermUid + ",LTU=" + tm.getLastTermUid
+                + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress + ",ReWrite=" +
+              nfino);
             ret.setResult(VoteResult.VR_REJECT)
             ret.setTermId(pbo.getTermId)
             ret.setSign(pbo.getSign)

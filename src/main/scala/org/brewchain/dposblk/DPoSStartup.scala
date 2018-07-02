@@ -66,12 +66,12 @@ class DPoSBGLoader() extends Runnable with LogHelper {
 
     //     Daos.actdb.getNodeAccount();
 
-	val naccount = Daos.actdb.getNodeAccount;
-    while (naccount == null) {
+	
+    while (Daos.actdb.getNodeAccount == null) {
       log.debug("dpos cws account not ready. ")
-      naccount = Daos.actdb.getNodeAccount;
       Thread.sleep(5000);
     }
+    val naccount = Daos.actdb.getNodeAccount;
     Daos.actdb.onStart(dposnet.root().bcuid, dposnet.root().v_address, dposnet.root().name)
     
     UUIDGenerator.setJVM(dposnet.root().bcuid.substring(1))
