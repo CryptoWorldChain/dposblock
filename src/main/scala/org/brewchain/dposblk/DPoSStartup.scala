@@ -65,13 +65,15 @@ class DPoSBGLoader() extends Runnable with LogHelper {
     //    RSM.instance = RaftStateManager(raftnet);
 
     //     Daos.actdb.getNodeAccount();
-    Daos.actdb.onStart(dposnet.root().bcuid, dposnet.root().v_address, dposnet.root().name)
 
-    while (Daos.actdb.getNodeAccount == null) {
+	val naccount = Daos.actdb.getNodeAccount;
+    while (naccount == null) {
       log.debug("dpos cws account not ready. ")
+      naccount = Daos.actdb.getNodeAccount;
       Thread.sleep(5000);
     }
-    val naccount = Daos.actdb.getNodeAccount;
+    Daos.actdb.onStart(dposnet.root().bcuid, dposnet.root().v_address, dposnet.root().name)
+    
     UUIDGenerator.setJVM(dposnet.root().bcuid.substring(1))
     dposnet.changeNodeVAddr(naccount);
     log.debug("dposnet.initOK:My Node=" + dposnet.root() + ",CoAddr=" + dposnet.root().v_address) // my node
