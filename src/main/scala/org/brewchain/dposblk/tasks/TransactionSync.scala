@@ -16,8 +16,10 @@ import org.fc.brewchain.p22p.node.Networks
 import java.util.concurrent.atomic.AtomicBoolean
 import org.brewchain.dposblk.pbgens.Dposblock.PSSyncTransaction
 import org.brewchain.dposblk.Daos
+import org.brewchain.bcapi.exec.SRunner
+import org.fc.brewchain.p22p.action.PMNodeHelper
 
-case class TransactionSync(network: Network) extends SRunner with LogHelper {
+case class TransactionSync(network: Network) extends SRunner with PMNodeHelper with LogHelper {
   def getName() = "TxSync"
   def runOnce() = {
       Thread.currentThread().setName("TxSync");

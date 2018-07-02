@@ -64,7 +64,7 @@ object DTask_DutyTermVote extends LogHelper {
         };
         val realist = reclist.filter { p => DCtrl.coMinerByUID.containsKey(p.getBcuid) };
         if (realist.size > 0) {
-            checkVoteDBList(records.get.size(),realist,vq);
+          checkVoteDBList(records.get.size(), realist, vq);
         } else {
           possibleTermID.remove(f._1);
         }
@@ -80,8 +80,9 @@ object DTask_DutyTermVote extends LogHelper {
     val reclist: Buffer[PDutyTermResult.Builder] = records.get.map { p =>
       PDutyTermResult.newBuilder().mergeFrom(p.getValue.getExtdata);
     };
-    val realist = reclist.filter { p => 
-      DCtrl.coMinerByUID.containsKey(p.getBcuid) };
+    val realist = reclist.filter { p =>
+      DCtrl.coMinerByUID.containsKey(p.getBcuid)
+    };
     log.debug("check db status:B[=" + vq.getBlockRange.getStartBlock + ","
       + vq.getBlockRange.getEndBlock + "],T="
       + vq.getTermId
@@ -89,10 +90,10 @@ object DTask_DutyTermVote extends LogHelper {
       + ",N=" + vq.getCoNodes
       + ",dbsize=" + records.get.size()
       + ",realsize=" + realist.size())
-      checkVoteDBList(records.get.size(),realist,vq);
+    checkVoteDBList(records.get.size(), realist, vq);
   }
-  def checkVoteDBList(recordsize:Int,realist: Buffer[PDutyTermResult.Builder],vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
-    
+  def checkVoteDBList(recordsize: Int, realist: Buffer[PDutyTermResult.Builder], vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
+
     if (realist.size() == 0) {
       DCtrl.voteRequest().clear()
       checkPossibleTerm(vq);
@@ -229,7 +230,7 @@ object DTask_DutyTermVote extends LogHelper {
         }
         DCtrl.coMinerByUID.map(p => {
           if (p._2.getTermId > tm.getTermId) {
-            log.debug("cannot vote:termid=" + p._2.getTermId +"->"+p._2.getBcuid+ ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
+            log.debug("cannot vote:termid=" + p._2.getTermId + "->" + p._2.getBcuid + ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
             canvote = false;
           }
         })
@@ -299,10 +300,16 @@ object DTask_DutyTermVote extends LogHelper {
 
       if (overridedBlock > 0 && StringUtils.isNotBlank(omitCoaddr)) {
         newterm.setCoNodes(newterm.getCoNodes - DCtrl.coMinerByUID.filter(p => p._2.getCoAddress.equals(omitCoaddr)).size)
-        log.debug("overrideBlockedVote!!TID=" + tm.getTermId + ",Tuid=" + tm.getSign + ",block=" + overridedBlock + ",cur=" + cn.getCurBlock);
+        log.debug("overrideBlockedVoteWithOmit!!TID=" + tm.getTermId + ",Tuid=" + tm.getSign + ",block=" + overridedBlock + ",cur=" + cn.getCurBlock);
         newterm.setRewriteTerm(RewriteTerm.newBuilder().setBlockLost(overridedBlock)
           .setRewriteMs(System.currentTimeMillis()).setTermStartMs(tm.getTermStartMs))
-
+      } else if (newterm.getBlockRange.getStartBlock <= tm.getBlockRange.getEndBlock) {
+        log.debug("overrideBlockedVoteRevote!!TID=" + tm.getTermId + ",TMuid=" + tm.getSign+",NTMUID="+newterm.getSign
+          + ",TBS=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
+          + ",NewTBS=[" + newterm.getBlockRange.getStartBlock + "," + newterm.getBlockRange.getEndBlock + "]"
+          + ",cur=" + cn.getCurBlock);
+        newterm.setRewriteTerm(RewriteTerm.newBuilder().setBlockLost(overridedBlock)
+          .setRewriteMs(System.currentTimeMillis()).setTermStartMs(tm.getTermStartMs))
       }
       newterm.setTermEndMs(System.currentTimeMillis() + DConfig.BLK_EPOCH_MS * mineBlockCount);
 

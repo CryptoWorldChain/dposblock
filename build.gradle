@@ -22,7 +22,7 @@ apply plugin: 'zippo'
 dependencies {
 	//	 testCompile 'junit:junit:4.12'
 	compile ("org.fc.zippo:org.fc.zippo.oapi:3.3.2")
-	compile ("org.brewchain:org.brewchain.bcapi:3.3.2")
+	compile ("org.brewchain:org.brewchain.bcapi:3.3.4")
 	compile ("org.brewchain:org.brewchain.p22p:3.0.0")
 	compile ("org.brewchain:org.brewchain.raftnet:3.0.0")
 	

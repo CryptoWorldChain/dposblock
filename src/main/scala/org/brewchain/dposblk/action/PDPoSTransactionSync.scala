@@ -27,6 +27,7 @@ import org.brewchain.dposblk.Daos
 import org.brewchain.evmapi.gens.Tx.MultiTransaction
 
 import scala.collection.JavaConversions._
+import org.apache.commons.lang3.StringUtils
 
 @NActorProvider
 @Instantiate
@@ -35,25 +36,24 @@ class PDPoSTransactionSync extends PSMDPoSNet[PSSyncTransaction] {
   override def service = PDPoSTransactionSyncService
 }
 
-object PDPoSTransactionSyncService extends LogHelper with PBUtils with LService[PSSyncTransaction] with PMNodeHelper{
+object PDPoSTransactionSyncService extends LogHelper with PBUtils with LService[PSSyncTransaction] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSSyncTransaction, handler: CompleteHandler) = {
     var ret = PRetSyncTransaction.newBuilder();
     if (!DCtrl.isReady()) {
       ret.setRetCode(-1).setRetMessage("DPoS Network Not READY")
       handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
     } else {
-      try{
+      try {
         for (x <- pbo.getTxHexStrList()) {
           var oMultiTransaction = MultiTransaction.newBuilder();
           oMultiTransaction.mergeFrom(Daos.enc.hexDec(x));
-			if (DCtrl.curDN().root().bcuid != oMultiTransaction.getTxNode().getBcuid) {
-				log.debug("sync transaction, hash::" + oMultiTransaction.getTxHash())
-          		Daos.txHelper.syncTransaction(oMultiTransaction);
-			}          
+          if (!StringUtils.equals(DCtrl.curDN().getBcuid, oMultiTransaction.getTxNode().getBcuid)) {
+            log.debug("sync transaction, hash::" + oMultiTransaction.getTxHash())
+            Daos.txHelper.syncTransaction(oMultiTransaction);
+          }
         }
         ret.setRetCode(1)
-      }
-      catch {
+      } catch {
         case t: Throwable => {
           log.error("error:", t);
           ret.clear()

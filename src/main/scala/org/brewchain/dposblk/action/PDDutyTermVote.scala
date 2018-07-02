@@ -72,8 +72,8 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
             ((tm.getTermId <= pbo.getLastTermId) && tm.getTermId <= pbo.getTermId - 1
               && (
                 (pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getStartBlock && pbo.getRewriteTerm != null &&
-                  pbo.getRewriteTerm.getBlockLost > 0)//for revote
-                  || pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock)// for continue vote
+                  pbo.getRewriteTerm.getBlockLost > 0) //for revote
+                  || pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock) // for continue vote
                   || StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) && pbo.getMinerQueueCount > 0) {
             //check quantifyminers
             val quantifyMinerByCoAddr = Map[String, PDNode]();
@@ -184,7 +184,11 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               + ",TBS=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
               + ",VBS=[" + vq.getBlockRange.getStartBlock + "," + vq.getBlockRange.getEndBlock + "]"
               + ",VM=" + vq.getMessageId + ",PLTU=" + pbo.getLastTermUid + ",LTU=" + tm.getLastTermUid
-              + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress);
+              + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress + ",ReWrite=" +
+              pbo.getRewriteTerm match {
+                case n if n != null => "["+pbo.getRewriteTerm.getBlockLost+","+pbo.getRewriteTerm.getRewriteMs
+                case _ => "null"
+              });
             ret.setResult(VoteResult.VR_REJECT)
             ret.setTermId(pbo.getTermId)
             ret.setSign(pbo.getSign)

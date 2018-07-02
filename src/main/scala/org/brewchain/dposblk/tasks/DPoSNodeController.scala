@@ -36,9 +36,11 @@ import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.binary.Hex
 import org.brewchain.account.util.ByteUtil
 import java.util.concurrent.TimeUnit
+import org.brewchain.bcapi.exec.SRunner
+import org.fc.brewchain.p22p.action.PMNodeHelper
 
 //投票决定当前的节点
-case class DPosNodeController(network: Network) extends SRunner with LogHelper {
+case class DPosNodeController(network: Network) extends SRunner  with PMNodeHelper with LogHelper {
   def getName() = "DCTRL"
   val DPOS_NODE_DB_KEY = "CURRENT_DPOS_KEY";
   val DPOS_NODE_DB_TERM = "CURRENT_DPOS_TERM";
