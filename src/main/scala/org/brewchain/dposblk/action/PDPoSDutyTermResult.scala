@@ -29,6 +29,7 @@ import org.brewchain.bcapi.gens.Oentity.OValue
 import org.brewchain.bcapi.gens.Oentity.OKey
 import com.google.protobuf.ByteString
 import org.brewchain.dposblk.tasks.DTask_DutyTermVote
+import org.brewchain.dposblk.utils.DConfig
 
 @NActorProvider
 @Instantiate
@@ -53,8 +54,8 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
         MDCSetMessageID(pbo.getMessageId)
         ret.setMessageId(pbo.getMessageId);
         ret.setRetCode(0).setRetMessage("SUCCESS")
-        if(pbo.getRetCode != 0){
-          log.debug("Get Wrong Result:"+pbo);
+        if (pbo.getRetCode != 0) {
+          log.debug("Get Wrong Result:" + pbo);
         }
         val cn = DCtrl.curDN()
         //        val vq = DCtrl.voteRequest();
@@ -66,7 +67,8 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
         //              && (vq.getTermId == pbo.getTermId)) {
         // 
         //            val records = Daos.dposdb.listBySecondKey("D" + vq.getTermId + "-" + vq.getSign)
-        Daos.dposdb.put(
+
+        Daos.dposvotedb.put(
           "V" + pbo.getTermId + "-" + pbo.getSign + "-"
             + pbo.getBcuid,
           OValue.newBuilder()
@@ -75,18 +77,24 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
             .setExtdata(pbo.toByteString())
             .setInfo(pbo.getSign)
             .setNonce(pbo.getResultValue).build())
+     
+        if (DTask_DutyTermVote.possibleTermID.size() < DConfig.MAX_POSSIBLE_TERMID) {
+          DTask_DutyTermVote.possibleTermID.put(pbo.getTermId, pbo.getBcuid);
+        }
         log.debug("Get DPos Term Vote Result:du=" + cn.getDutyUid + ",T=" + pbo.getTermId
           + ",sign=" + pbo.getSign + ",VA=" + pbo.getVoteAddress + ",FROM=" + pbo.getBcuid + ",Result=" + pbo.getResult);
-        DTask_DutyTermVote.synchronized({
-          DTask_DutyTermVote.notifyAll()
-        })
+
         //save bc info
 
         DCtrl.coMinerByUID.get(pbo.getBcuid) match {
           case Some(p) =>
-            DCtrl.coMinerByUID.put(pbo.getBcuid,p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(pbo.getCurTermid).setTermSign(pbo.getCurTermSign).build());
+            DCtrl.coMinerByUID.put(pbo.getBcuid, p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(pbo.getCurTermid).setTermSign(pbo.getCurTermSign).build());
           case None =>
         }
+
+        DTask_DutyTermVote.synchronized({
+          DTask_DutyTermVote.notifyAll()
+        })
         //
         //          }
         //        })

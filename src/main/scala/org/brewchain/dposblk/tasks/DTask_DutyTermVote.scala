@@ -46,7 +46,7 @@ object DTask_DutyTermVote extends LogHelper {
   }
   val omitNodes: Map[String, PDNode] = Map.empty;
   def clearRecords(votelist: Buffer[PDutyTermResult.Builder]): Unit = {
-    Daos.dposdb.batchDelete(votelist.map { p =>
+    Daos.dposvotedb.batchDelete(votelist.map { p =>
       OKey.newBuilder().setData(
         ByteString.copyFromUtf8(
           "V" + p.getTermId + "-" + p.getSign + "-"
@@ -58,7 +58,7 @@ object DTask_DutyTermVote extends LogHelper {
   def checkPossibleTerm(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
     possibleTermID.map(f => {
       if (DCtrl.coMinerByUID.containsKey(f._2)) {
-        val records = Daos.dposdb.listBySecondKey("D" + f._1);
+        val records = Daos.dposvotedb.listBySecondKey("D" + f._1);
         val reclist: Buffer[PDutyTermResult.Builder] = records.get.map { p =>
           PDutyTermResult.newBuilder().mergeFrom(p.getValue.getExtdata);
         };
@@ -73,7 +73,7 @@ object DTask_DutyTermVote extends LogHelper {
     false;
   }
   def checkVoteDB(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
-    val records = Daos.dposdb.listBySecondKey("D" + (vq.getTermId match {
+    val records = Daos.dposvotedb.listBySecondKey("D" + (vq.getTermId match {
       case 0 => DCtrl.termMiner().getTermId + 1
       case _ => vq.getTermId
     }));
@@ -156,7 +156,8 @@ object DTask_DutyTermVote extends LogHelper {
                 case n: Undecisible =>
                   log.debug("Undecisible:dbsize=" + votelist.size + ",N=" + dbtempvote.getCoNodes);
                   if (System.currentTimeMillis() - dbtempvote.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
-                    log.debug("clear timeout vote after:" + JodaTimeHelper.secondFromNow(dbtempvote.getTermStartMs))
+                    log.debug("clear timeout vote after:" + JodaTimeHelper.secondFromNow(dbtempvote.getTermStartMs)+",max="+DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000+",sign="+dbtempvote.getSign
+                        +",dbsize="+votelist.size)
                     clearRecords(votelist);
                   }
                   false

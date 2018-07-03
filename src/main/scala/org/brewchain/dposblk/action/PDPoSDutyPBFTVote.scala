@@ -62,12 +62,12 @@ object PDPoSDutyPBFTVote extends LogHelper with PBUtils with LService[PDutyTermR
         //              && (vq.getTermId == pbo.getTermId)) {
         // 
         //            val records = Daos.dposdb.listBySecondKey("D" + vq.getTermId + "-" + vq.getSign)
-        Daos.dposdb.put(
+        Daos.dposvotedb.put(
           "V" + vq.getTermId + "-" + vq.getSign + "-"
             + pbo.getBcuid,
           OValue.newBuilder()
             .setCount(pbo.getTermId)
-            .setSecondKey("D" + pbo.getTermId + "-" + pbo.getSign)
+            .setSecondKey("D" + pbo.getTermId)
             .setExtdata(pbo.toByteString())
             .setInfo(pbo.getVoteAddress)
             .setNonce(pbo.getResultValue).build())

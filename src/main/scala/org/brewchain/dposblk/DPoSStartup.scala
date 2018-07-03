@@ -50,7 +50,8 @@ class DPoSBGLoader() extends Runnable with LogHelper {
       log.debug("Daos Or sockSender Not Ready..:pzp=" + Daos.pzp)
       Thread.sleep(1000);
     }
-
+    
+    
     var dposnet = Daos.pzp.networkByID("dpos")
 
     while (dposnet == null

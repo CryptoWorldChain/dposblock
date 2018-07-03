@@ -33,6 +33,11 @@ class Daos extends PSMDPoSNet[Message] with ActorService {
   @BeanProperty
   var dposdb: ODBSupport = null
 
+  
+  @StoreDAO(target = "bc_bdbvote", daoClass = classOf[ODSDPoSDao])
+  @BeanProperty
+  var dposvotedb: ODBSupport = null
+  
   //  @StoreDAO(target = "bc_bdb", daoClass = classOf[ODSBlkDao])
   //  @BeanProperty
   //  var blkdb: ODBSupport = null
@@ -40,7 +45,16 @@ class Daos extends PSMDPoSNet[Message] with ActorService {
   def setDposdb(daodb: DomainDaoSupport) {
     if (daodb != null && daodb.isInstanceOf[ODBSupport]) {
       dposdb = daodb.asInstanceOf[ODBSupport];
-      Daos.dposdb = dposdb;
+      Daos.dpospropdb = dposdb;
+    } else {
+      log.warn("cannot set dposdb ODBSupport from:" + daodb);
+    }
+  }
+  
+   def setDposvotedb(daodb: DomainDaoSupport) {
+    if (daodb != null && daodb.isInstanceOf[ODBSupport]) {
+      dposvotedb = daodb.asInstanceOf[ODBSupport];
+      Daos.dposvotedb = dposvotedb;
     } else {
       log.warn("cannot set dposdb ODBSupport from:" + daodb);
     }
@@ -112,15 +126,17 @@ class Daos extends PSMDPoSNet[Message] with ActorService {
 }
 
 object Daos extends OLog {
-  var dposdb: ODBSupport = null
+  var dpospropdb: ODBSupport = null
+  var dposvotedb:ODBSupport = null
   //  var blkdb: ODBSupport = null
   var pzp: PZPCtrl = null;
-  var actdb: BlockChainHelper = null;
+  var actdb: BlockChainHelper = null; 
   var blkHelper: BlockHelper = null;
   var txHelper: TransactionHelper = null;
   var enc: EncAPI = null;
   def isDbReady(): Boolean = {
-    dposdb != null && dposdb.getDaosupport.isInstanceOf[ODBSupport] &&
+    dpospropdb != null && dpospropdb.getDaosupport.isInstanceOf[ODBSupport] &&
+    dposvotedb != null && dposvotedb.getDaosupport.isInstanceOf[ODBSupport] &&
       blkHelper != null &&
       txHelper != null &&
       pzp != null && actdb != null;

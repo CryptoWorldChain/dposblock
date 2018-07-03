@@ -55,13 +55,13 @@ case class DPosNodeController(network: Network) extends SRunner  with PMNodeHelp
   }
 
   def saveVoteReq(pbo: PSDutyTermVote): Unit = {
-    Daos.dposdb.put(
+    Daos.dposvotedb.put(
       "TERM-TEMP-" + pbo.getSign,
       OValue.newBuilder().setExtdata(pbo.toByteString()).build())
   }
 
   def loadVoteReq(sign: String): PSDutyTermVote.Builder = {
-    val ov = Daos.dposdb.get("TERM-TEMP-" + sign).get
+    val ov = Daos.dposvotedb.get("TERM-TEMP-" + sign).get
     if (ov != null) {
       PSDutyTermVote.newBuilder().mergeFrom(ov.getExtdata)
     } else {
@@ -69,13 +69,13 @@ case class DPosNodeController(network: Network) extends SRunner  with PMNodeHelp
     }
   }
   def loadNodeFromDB(): PDNode.Builder = {
-    val ov = Daos.dposdb.get(DPOS_NODE_DB_KEY).get
+    val ov = Daos.dpospropdb.get(DPOS_NODE_DB_KEY).get
     val root_node = network.root();
     if (ov == null) {
       cur_dnode.setBcuid(root_node.bcuid)
         .setCurBlock(1).setCoAddress(root_node.v_address)
         .setBitIdx(root_node.node_idx)
-      Daos.dposdb.put(
+      Daos.dpospropdb.put(
         DPOS_NODE_DB_KEY,
         OValue.newBuilder().setExtdata(cur_dnode.build().toByteString()).build())
     } else {
@@ -94,9 +94,9 @@ case class DPosNodeController(network: Network) extends SRunner  with PMNodeHelp
       syncToDB()
     }
 
-    val termov = Daos.dposdb.get(DPOS_NODE_DB_TERM).get
+    val termov = Daos.dpospropdb.get(DPOS_NODE_DB_TERM).get
     if (termov == null) {
-      Daos.dposdb.put(
+      Daos.dpospropdb.put(
         DPOS_NODE_DB_TERM,
         OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
     } else {
@@ -109,7 +109,7 @@ case class DPosNodeController(network: Network) extends SRunner  with PMNodeHelp
       .setTermEndBlock(term_Miner.getBlockRange.getEndBlock)
   }
   def syncToDB() {
-    Daos.dposdb.put(
+    Daos.dpospropdb.put(
       DPOS_NODE_DB_KEY,
       OValue.newBuilder().setExtdata(cur_dnode.build().toByteString()).build())
   }
@@ -123,7 +123,7 @@ case class DPosNodeController(network: Network) extends SRunner  with PMNodeHelp
       .setTermStartBlock(term_Miner.getBlockRange.getStartBlock)
       .setTermEndBlock(term_Miner.getBlockRange.getEndBlock)
 
-    Daos.dposdb.put(DPOS_NODE_DB_TERM,
+    Daos.dpospropdb.put(DPOS_NODE_DB_TERM,
       OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
   }
   def updateBlockHeight(blockHeight: Int) = {
