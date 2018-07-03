@@ -58,19 +58,24 @@ object PDCoinbase extends LogHelper with PBUtils with LService[PSCoinbase] with 
             if (StringUtils.equals(pbo.getCoAddress, cn.getCoAddress) || pbo.getBlockHeight > cn.getCurBlock) {
               if (pbo.getTermId > DCtrl.termMiner().getTermId ||
                 DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress, pbo.getMineTime)._1) {
-                DCtrl.saveBlock(pbo.getBlockEntry) match {
+                val (acceptHeight , blockWant) = DCtrl.saveBlock(pbo.getBlockEntry) 
+                acceptHeight match {
                   case n if n > 0 && n < pbo.getBlockHeight =>
                     ret.setResult(CoinbaseResult.CR_PROVEN)
                     log.info("newblock:UU,H=" + pbo.getBlockHeight + ",DB=" + n + ":coadr=" + pbo.getCoAddress + ",MN=" + DCtrl.coMinerByUID
-                      .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size+",CN="+DCtrl.termMiner().getCoNodes);
-                    BlockSync.tryBackgroundSyncLogs(  pbo.getBlockHeight, pbo.getBcuid)(DCtrl.dposNet())
+                      .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size + ",CN=" + DCtrl.termMiner().getCoNodes);
+                    if (!BlockSync.running.get) {
+                      BlockSync.tryBackgroundSyncLogs(blockWant, pbo.getBcuid)(DCtrl.dposNet())
+                    }else{
+                      log.debug("skip sync logs , other thread requsting:rc="+BlockSync.runCounter.get);
+                    }
                   case n if n > 0 =>
                     log.info("newblock:OK,H=" + pbo.getBlockHeight + ",DB=" + n + ":coadr=" + pbo.getCoAddress + ",MN=" + DCtrl.coMinerByUID
-                      .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size+",CN="+DCtrl.termMiner().getCoNodes)
+                      .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size + ",CN=" + DCtrl.termMiner().getCoNodes)
                     ret.setResult(CoinbaseResult.CR_PROVEN)
                   case n @ _ =>
                     log.info("newblock:NO,H=" + pbo.getBlockHeight + ",DB=" + n + ":coadr=" + pbo.getCoAddress + ",MN=" + DCtrl.coMinerByUID
-                      .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size+",CN="+DCtrl.termMiner().getCoNodes)
+                      .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size + ",CN=" + DCtrl.termMiner().getCoNodes)
                     ret.setResult(CoinbaseResult.CR_REJECT)
                 }
               } else {
@@ -91,7 +96,7 @@ object PDCoinbase extends LogHelper with PBUtils with LService[PSCoinbase] with 
           }
         } else {
           log.info("newblock:ok,H=" + pbo.getBlockHeight + ",DB=" + pbo.getBlockHeight + ":Local=" + pbo.getCoAddress + ",MN=" + DCtrl.coMinerByUID
-            .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size+",CN="+DCtrl.termMiner().getCoNodes)
+            .size + ",DN=" + DCtrl.dposNet().directNodeByIdx.size + ",PN=" + DCtrl.dposNet().pendingNodeByBcuid.size + ",CN=" + DCtrl.termMiner().getCoNodes)
           ret.setResult(CoinbaseResult.CR_PROVEN)
         }
 

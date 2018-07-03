@@ -29,7 +29,7 @@ object BlockSync extends LogHelper {
   }
   def trySyncBlock(block_max_wanted: Int, fastNodeID: String)(implicit network: Network): Unit = {
     if (network.nodeByBcuid(fastNodeID) == network.noneNode) {
-      log.debug("cannot sync log bcuid not found in dposnet:nodeid=" + fastNodeID+":");
+      log.debug("cannot sync log bcuid not found in dposnet:nodeid=" + fastNodeID + ":");
     } else {
       val cn = DCtrl.instance.cur_dnode;
       //
@@ -45,8 +45,8 @@ object BlockSync extends LogHelper {
         })
         log.debug("try sync block: want max block= " + block_max_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
         var lastLogTime = 0L;
-
-        while (!running.compareAndSet(false, true)) {
+        var skipreq = false;
+        while (!running.compareAndSet(false, true) && !skipreq) {
           try {
             if (System.currentTimeMillis() - lastLogTime > 10 * 1000) {
               log.debug("waiting for runnerSyncBatch:curheight=" + cn.getCurBlock + ",runCounter=" + runCounter.get + ",wantblock= " + block_max_wanted + ",maxreqheight=" + maxReqHeight.get)
@@ -55,7 +55,7 @@ object BlockSync extends LogHelper {
             this.synchronized(this.wait(DConfig.SYNCBLK_WAITSEC_NEXTRUN))
             if (maxReqHeight.get > block_max_wanted) {
               log.debug("not need to sync block.: Max block=" + block_max_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
-              return ;
+              skipreq = true;
             }
           } catch {
             case t: InterruptedException =>
@@ -63,53 +63,62 @@ object BlockSync extends LogHelper {
           }
         }
 
-        //request log.
-        val pagecount =
-          ((block_max_wanted - cn.getCurBlock) / DConfig.SYNCBLK_PAGE_SIZE).asInstanceOf[Int]
-        +(if ((block_max_wanted - cn.getCurBlock) % DConfig.SYNCBLK_PAGE_SIZE == 0) 1 else 0)
+        if (maxReqHeight.get > block_max_wanted) {
+          log.debug("not need to sync block.: Max block=" + block_max_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
+          skipreq = true;
+        }
+        if (!skipreq) {
+          //request log.
+          val pagecount =
+            ((block_max_wanted - cn.getCurBlock) / DConfig.SYNCBLK_PAGE_SIZE).asInstanceOf[Int]
+          +(if ((block_max_wanted - cn.getCurBlock) % DConfig.SYNCBLK_PAGE_SIZE == 0) 1 else 0)
 
-        //        val cdlcount = Math.min(RConfig.SYNCLOG_MAX_RUNNER, pagecount)
-        var cc = cn.getCurBlock + 1;
-        while (cc <= block_max_wanted) {
-          val runner = DTask_SyncBlock(startIdx = cc, endIdx =
-            Math.min(cc + DConfig.SYNCBLK_PAGE_SIZE - 1, block_max_wanted),
-            network = network, fastNodeID, runCounter)
-          cc += DConfig.SYNCBLK_PAGE_SIZE
-          var runed = false;
-          runCounter.synchronized({
-            if (runCounter.get < DConfig.SYNCBLK_MAX_RUNNER) {
+          //        val cdlcount = Math.min(RConfig.SYNCLOG_MAX_RUNNER, pagecount)
+          var cc = cn.getCurBlock + 1;
+          while (cc <= block_max_wanted) {
+            val runner = DTask_SyncBlock(startIdx = cc, endIdx =
+              Math.min(cc + DConfig.SYNCBLK_PAGE_SIZE - 1, block_max_wanted),
+              network = network, fastNodeID, runCounter)
+            cc += DConfig.SYNCBLK_PAGE_SIZE
+            var runed = false;
+            runCounter.synchronized({
+              if (runCounter.get < DConfig.SYNCBLK_MAX_RUNNER) {
+                runCounter.incrementAndGet();
+                Scheduler.runOnce(runner);
+                runed = true;
+              }
+            })
+            var lastLogTime = 0L;
+            while (runCounter.get > DConfig.SYNCBLK_MAX_RUNNER) {
+              //wait... for next runner
+              try {
+                if (System.currentTimeMillis() - lastLogTime > 10 * 1000) {
+                  log.debug("waiting for runner:cur=" + runCounter.get)
+                  lastLogTime = System.currentTimeMillis()
+                }
+                this.synchronized(this.wait(DConfig.SYNCBLK_WAITSEC_NEXTRUN))
+              } catch {
+                case t: InterruptedException =>
+                case e: Throwable =>
+              }
+            }
+            if (!runed) {
               runCounter.incrementAndGet();
               Scheduler.runOnce(runner);
-              runed = true;
-            }
-          })
-          var lastLogTime = 0L;
-          while (runCounter.get > DConfig.SYNCBLK_MAX_RUNNER) {
-            //wait... for next runner
-            try {
-              if (System.currentTimeMillis() - lastLogTime > 10 * 1000) {
-                log.debug("waiting for runner:cur=" + runCounter.get)
-                lastLogTime = System.currentTimeMillis()
-              }
-              this.synchronized(this.wait(DConfig.SYNCBLK_WAITSEC_NEXTRUN))
-            } catch {
-              case t: InterruptedException =>
-              case e: Throwable =>
             }
           }
-          if (!runed) {
-            runCounter.incrementAndGet();
-            Scheduler.runOnce(runner);
+          while (runCounter.get > 0) {
+            if (System.currentTimeMillis() - lastLogTime > 10 * 1000) {
+              log.debug("waiting for log syncs:" + runCounter.get);
+              lastLogTime = System.currentTimeMillis()
+            }
+            this.synchronized(Thread.sleep(DConfig.SYNCBLK_WAITSEC_NEXTRUN))
           }
+          log.debug("finished init follow up logs:" + DCtrl.curDN().getCurBlock);
+        } else {
+          log.debug("skip request follow up logs:" + DCtrl.curDN().getCurBlock + ",block_wanted=" + block_max_wanted
+            + ",from=" + fastNodeID);
         }
-        while (runCounter.get > 0) {
-          if (System.currentTimeMillis() - lastLogTime > 10 * 1000) {
-            log.debug("waiting for log syncs:" + runCounter.get);
-            lastLogTime = System.currentTimeMillis()
-          }
-          this.synchronized(Thread.sleep(DConfig.SYNCBLK_WAITSEC_NEXTRUN))
-        }
-        log.debug("finished init follow up logs:" + DCtrl.curDN().getCurBlock);
       } finally {
         running.set(false)
       }

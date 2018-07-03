@@ -60,7 +60,7 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
                   //            if (realmap.size() == endIdx - startIdx + 1) {
                   log.debug("realBlockCount=" + realmap.size);
                   realmap.map { b =>
-                    val acceptedHeight = DCtrl.saveBlock(b);
+                    val (acceptedHeight,blockwanted) = DCtrl.saveBlock(b);
                     if (acceptedHeight == b.getBlockHeight) {
                       log.debug("sync block height ok=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
                     } else {

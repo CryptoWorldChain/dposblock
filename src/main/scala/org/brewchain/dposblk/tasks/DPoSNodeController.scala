@@ -361,10 +361,11 @@ object DCtrl extends LogHelper {
     })
 
   }
-  def saveBlock(b: PBlockEntryOrBuilder): Int = {
+  def saveBlock(b: PBlockEntryOrBuilder): (Int,Int) = {
     Daos.blkHelper.synchronized({
       if (!b.getCoinbaseBcuid.equals(DCtrl.curDN().getBcuid)) {
         val res = Daos.blkHelper.ApplyBlock(b.getBlockHeader);
+        
         if (res.getTxHashsCount > 0) {
           log.debug("must sync transaction first.");
           for (txHash <- res.getTxHashsList) {
@@ -395,14 +396,14 @@ object DCtrl extends LogHelper {
         }
         if (res.getCurrentNumber > 0) {
           DCtrl.instance.updateBlockHeight(res.getCurrentNumber)
-          res.getCurrentNumber
+          (res.getCurrentNumber,res.getWantNumber)
         } else {
-          res.getCurrentNumber
+          (res.getCurrentNumber,res.getWantNumber)
         }
 
       } else {
         DCtrl.instance.updateBlockHeight(b.getBlockHeight)
-        b.getBlockHeight
+        (b.getBlockHeight,b.getBlockHeight)
       }
     }) //synchronized
   }
