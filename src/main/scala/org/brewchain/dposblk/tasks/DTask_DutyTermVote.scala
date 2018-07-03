@@ -90,7 +90,12 @@ object DTask_DutyTermVote extends LogHelper {
       + ",N=" + vq.getCoNodes
       + ",dbsize=" + records.get.size()
       + ",realsize=" + realist.size())
-    checkVoteDBList(records.get.size(), realist, vq);
+    if (realist.size > 0) {
+      checkVoteDBList(records.get.size(), realist, vq);
+    } else {
+      clearRecords(reclist);
+      false
+    }
   }
   def checkVoteDBList(recordsize: Int, realist: Buffer[PDutyTermResult.Builder], vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
 
@@ -119,7 +124,8 @@ object DTask_DutyTermVote extends LogHelper {
         val sign = kv._1
         val votelist = kv._2
         val dbtempvote = DCtrl.instance.loadVoteReq(sign);
-        log.debug("dbtempvote=" + dbtempvote.getSign + ",vid=" + dbtempvote.getTermId + ",TID=" + DCtrl.termMiner().getTermId + ",sign=" + sign + ",size=" + votelist.size);
+        log.debug("dbtempvote=" + dbtempvote.getSign + ",vid=" + dbtempvote.getTermId + ",TID=" + DCtrl.termMiner().getTermId + ",sign=" + sign + ",size=" + votelist.size
+          + ",N=" + dbtempvote.getCoNodes);
         if (StringUtils.equals(dbtempvote.getSign, sign)) {
           if (dbtempvote.getTermId > DCtrl.termMiner().getTermId) {
             val result = Votes.vote(votelist.filter { p => dbtempvote.getMinerQueueList.filter { x => p.getVoteAddress.equals(x.getMinerCoaddr) }.size > 0 })
@@ -154,21 +160,31 @@ object DTask_DutyTermVote extends LogHelper {
                     false
                   }
                 case n: Undecisible =>
-                  log.debug("Undecisible:dbsize=" + votelist.size + ",N=" + dbtempvote.getCoNodes);
+                  log.debug("Undecisible:dbsize=" + votelist.size + ",T=" + dbtempvote.getTermId
+                    + ",curr=" + DCtrl.curDN().getCoAddress
+                    + ",sign=" + dbtempvote.getSign + ",N=" + dbtempvote.getCoNodes);
                   if (System.currentTimeMillis() - dbtempvote.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
-                    log.debug("clear timeout vote after:" + JodaTimeHelper.secondFromNow(dbtempvote.getTermStartMs)+",max="+DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000+",sign="+dbtempvote.getSign
-                        +",dbsize="+votelist.size)
+                    log.debug("clear timeout vote after:" + JodaTimeHelper.secondFromNow(dbtempvote.getTermStartMs) + ",max=" + DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000 + ",sign=" + dbtempvote.getSign
+                      + ",dbsize=" + votelist.size)
                     clearRecords(votelist);
                   }
                   false
                 case n: NotConverge =>
+                  log.debug("NotConverge=" + votelist.size + ",T=" + dbtempvote.getTermId
+                    + ",curr=" + DCtrl.curDN().getCoAddress
+                    + ",sign=" + dbtempvote.getSign + ",N=" + dbtempvote.getCoNodes);
+
                   clearRecords(votelist);
                   if (StringUtils.equals(dbtempvote.getCoAddress, DCtrl.instance.cur_dnode.getCoAddress)) {
                     banForLocal = true;
                   }
                   false
                 case a @ _ =>
-                  //              clearRecords(votelist);
+                  log.debug("unknow result =" + votelist.size + ",T=" + dbtempvote.getTermId
+                    + ",curr=" + DCtrl.curDN().getCoAddress
+                    + ",sign=" + dbtempvote.getSign + ",N=" + dbtempvote.getCoNodes + ",a=" + a);
+                  clearRecords(votelist);
+
                   false
               }
             if (result) {
@@ -215,10 +231,9 @@ object DTask_DutyTermVote extends LogHelper {
       } else if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         || JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) > DConfig.DTV_TIMEOUT_SEC)
         && System.currentTimeMillis() > ban_for_vote_sec &&
-        (cn.getCominerStartBlock +
-          Math.min(DConfig.COMINER_WAIT_BLOCKS_TODUTY, (tm.getCoNodes - 1) *
-            DConfig.DTV_MUL_BLOCKS_EACH_TERM) <= cn.getCurBlock)
-          && vq.getTermId <= tm.getTermId + 1) {
+        (cn.getCurBlock > tm.getBlockRange.getStartBlock)
+        && vq.getTermId <= tm.getTermId + 1) {
+        //        cn.setCominerStartBlock(1)
 
         val msgid = UUIDGenerator.generate();
         MDCSetMessageID(msgid);
@@ -305,7 +320,7 @@ object DTask_DutyTermVote extends LogHelper {
         newterm.setRewriteTerm(RewriteTerm.newBuilder().setBlockLost(overridedBlock)
           .setRewriteMs(System.currentTimeMillis()).setTermStartMs(tm.getTermStartMs))
       } else if (newterm.getBlockRange.getStartBlock <= tm.getBlockRange.getEndBlock) {
-        log.debug("overrideBlockedVoteRevote!!TID=" + tm.getTermId + ",TMuid=" + tm.getSign+",NTMUID="+newterm.getSign
+        log.debug("overrideBlockedVoteRevote!!TID=" + tm.getTermId + ",TMuid=" + tm.getSign + ",NTMUID=" + newterm.getSign
           + ",TBS=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
           + ",NewTBS=[" + newterm.getBlockRange.getStartBlock + "," + newterm.getBlockRange.getEndBlock + "]"
           + ",cur=" + cn.getCurBlock);
