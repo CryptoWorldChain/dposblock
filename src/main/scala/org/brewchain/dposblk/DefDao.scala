@@ -34,7 +34,7 @@ class Daos extends PSMDPoSNet[Message] with ActorService {
   var dposdb: ODBSupport = null
 
   
-  @StoreDAO(target = "bc_bdbvote", daoClass = classOf[ODSDPoSDao])
+  @StoreDAO(target = "bc_bdb", daoClass = classOf[ODSDPoSVoteDao])
   @BeanProperty
   var dposvotedb: ODBSupport = null
   
