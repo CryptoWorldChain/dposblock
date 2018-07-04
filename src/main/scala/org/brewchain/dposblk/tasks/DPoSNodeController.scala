@@ -87,7 +87,7 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
       }
     }
 
-    if (cur_dnode.getCurBlock != Daos.actdb.getLastBlockNumber) {
+    if (cur_dnode.getCurBlock != Daos.actdb.getLastBlockNumber.intValue()) {
       log.warn("dpos block height Info not Equal to AccountDB:c=" +
         cur_dnode.getCurBlock + " ==> a=" + Daos.actdb.getLastBlockNumber);
       cur_dnode.setCurBlock(Daos.actdb.getLastBlockNumber.intValue())
