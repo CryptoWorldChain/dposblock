@@ -103,10 +103,11 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
       if (DConfig.FORCE_RESET_VOTE_TERM == 1) {
         log.debug("force reset termreq:");
         Daos.dpospropdb.put(
-        DPOS_NODE_DB_TERM,
-        OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
-      }else{
+          DPOS_NODE_DB_TERM,
+          OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
+      } else {
         term_Miner.mergeFrom(termov.getExtdata)
+        log.debug("load from db:=" + DConfig.FORCE_RESET_VOTE_TERM);
       }
     }
     cur_dnode.setLastTermSign(term_Miner.getLastTermUid)
@@ -425,8 +426,8 @@ object DCtrl extends LogHelper {
       //          .setSign(Hex.encodeHexString(blk.getHeader.getBlockHash.toByteArray()))
       //          .setSliceId(blk.getHeader.getSliceId.asInstanceOf[Int])
       //          .setCoinbaseBcuid(blk.getMiner.getAddress)
-      log.debug("load block ok =" + block + ",S=" + blk.getHeader.getSliceId + ",CB=" + blk.getMiner.getBcuid
-        + ",sign=" + blk.getHeader.getBlockHash)
+//      log.debug("load block ok =" + block + ",S=" + blk.getHeader.getSliceId + ",CB=" + blk.getMiner.getBcuid
+//        + ",sign=" + blk.getHeader.getBlockHash)
       b
     } else {
       log.debug("blk not found in AccountDB:" + block);
