@@ -181,7 +181,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
             }
           } else {
             val nfino = if (pbo.getRewriteTerm != null) {
-              "[" + pbo.getRewriteTerm.getBlockLost + "," + pbo.getRewriteTerm.getRewriteMs+"]"
+              "[" + pbo.getRewriteTerm.getBlockLost + "]"
             } else {
               "null";
             }

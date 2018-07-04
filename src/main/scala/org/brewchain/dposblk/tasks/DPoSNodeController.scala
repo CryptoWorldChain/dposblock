@@ -151,6 +151,7 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
     var continue = true;
     while (continue) {
       try {
+        MDCSetMessageID(term_Miner.getSign)
         continue = false;
         log.info("DCTRL.RunOnce:S=" + cur_dnode.getState + ",B=" + cur_dnode.getCurBlock
           + ",CA=" + cur_dnode.getCoAddress
@@ -296,7 +297,8 @@ object DCtrl extends LogHelper {
       }
       (false, false)
     } else {
-      val blkshouldMineMS = (block - tm.getStartBlock + 1) * tm.getEachBlockMs + termMiner().getTermStartMs
+      val lastBlkTime = if (block == 1) 0 else Daos.blkHelper.GetBestBlock().getHeader.getTimestamp;
+      val blkshouldMineMS =  tm.getEachBlockMs + lastBlkTime
       val realblkMineMS = mineTime;
       val termblockLeft = block - tm.getEndBlock
       minerByBlockHeight(block) match {
@@ -426,8 +428,8 @@ object DCtrl extends LogHelper {
       //          .setSign(Hex.encodeHexString(blk.getHeader.getBlockHash.toByteArray()))
       //          .setSliceId(blk.getHeader.getSliceId.asInstanceOf[Int])
       //          .setCoinbaseBcuid(blk.getMiner.getAddress)
-//      log.debug("load block ok =" + block + ",S=" + blk.getHeader.getSliceId + ",CB=" + blk.getMiner.getBcuid
-//        + ",sign=" + blk.getHeader.getBlockHash)
+      //      log.debug("load block ok =" + block + ",S=" + blk.getHeader.getSliceId + ",CB=" + blk.getMiner.getBcuid
+      //        + ",sign=" + blk.getHeader.getBlockHash)
       b
     } else {
       log.debug("blk not found in AccountDB:" + block);

@@ -141,7 +141,7 @@ object DTask_DutyTermVote extends LogHelper {
                       + ",curr=" + DCtrl.curDN().getCoAddress
                       + ",sign=" + dbtempvote.getSign
                       + ",N=" + dbtempvote.getCoNodes + ":"
-                      + dbtempvote.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr));
+                      + dbtempvote.getMinerQueueList.foldLeft("")((a, b) => a + "\n\t" + b.getBlockHeight + "=" + b.getMinerCoaddr));
                     DCtrl.instance.term_Miner = dbtempvote
                     DCtrl.instance.updateTerm()
                     hasConverge = true;
@@ -355,7 +355,7 @@ object DTask_DutyTermVote extends LogHelper {
 
       log.debug("try to vote:newterm=" + newterm.getTermId + ",curterm=" + tm.getTermId
         + ",tm_end_past=" + JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) + ",lastsig=" + tm.getSign
-        + ",sec,vN=" + DCtrl.coMinerByUID.size + ",cN=" + conodescount + ",sign=" + newterm.getSign + ",mineQ=" + newterm.getMinerQueueList.foldLeft("\n\t")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr))
+        + ",sec,vN=" + DCtrl.coMinerByUID.size + ",cN=" + conodescount + ",sign=" + newterm.getSign + ",mineQ=" + newterm.getMinerQueueList.foldLeft("")((a, b) => a + "\n\t" + b.getBlockHeight + "=" + b.getMinerCoaddr))
       DCtrl.instance.vote_Request = newterm;
       network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), msgid);
       true
