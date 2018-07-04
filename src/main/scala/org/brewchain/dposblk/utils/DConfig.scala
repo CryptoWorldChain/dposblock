@@ -59,7 +59,8 @@ object DConfig {
 
   val MAX_POSSIBLE_TERMID = prop.get(PROP_DOMAIN + "max.possible.termid", 100);
 
-  
-    val HEATBEAT_TICK_SEC = prop.get(PROP_DOMAIN + "heatbeat.tick.sec", 60);
+  val HEATBEAT_TICK_SEC = prop.get(PROP_DOMAIN + "heatbeat.tick.sec", 60);
+
+  val FORCE_RESET_VOTE_TERM = prop.get(PROP_DOMAIN + "force.reset.vote.term", 0);
 
 }

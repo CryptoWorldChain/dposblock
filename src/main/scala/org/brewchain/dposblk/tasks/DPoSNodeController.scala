@@ -40,7 +40,7 @@ import org.brewchain.bcapi.exec.SRunner
 import org.fc.brewchain.p22p.action.PMNodeHelper
 
 //投票决定当前的节点
-case class DPosNodeController(network: Network) extends SRunner  with PMNodeHelper with LogHelper {
+case class DPosNodeController(network: Network) extends SRunner with PMNodeHelper with LogHelper {
   def getName() = "DCTRL"
   val DPOS_NODE_DB_KEY = "CURRENT_DPOS_KEY";
   val DPOS_NODE_DB_TERM = "CURRENT_DPOS_TERM";
@@ -100,7 +100,14 @@ case class DPosNodeController(network: Network) extends SRunner  with PMNodeHelp
         DPOS_NODE_DB_TERM,
         OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
     } else {
-      term_Miner.mergeFrom(termov.getExtdata)
+      if (DConfig.FORCE_RESET_VOTE_TERM == 1) {
+        log.debug("force reset termreq:");
+        Daos.dpospropdb.put(
+        DPOS_NODE_DB_TERM,
+        OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
+      }else{
+        term_Miner.mergeFrom(termov.getExtdata)
+      }
     }
     cur_dnode.setLastTermSign(term_Miner.getLastTermUid)
       .setTermId(term_Miner.getTermId)
@@ -361,11 +368,11 @@ object DCtrl extends LogHelper {
     })
 
   }
-  def saveBlock(b: PBlockEntryOrBuilder): (Int,Int) = {
+  def saveBlock(b: PBlockEntryOrBuilder): (Int, Int) = {
     Daos.blkHelper.synchronized({
       if (!b.getCoinbaseBcuid.equals(DCtrl.curDN().getBcuid)) {
         val res = Daos.blkHelper.ApplyBlock(b.getBlockHeader);
-        
+
         if (res.getTxHashsCount > 0) {
           log.debug("must sync transaction first.");
           for (txHash <- res.getTxHashsList) {
@@ -396,14 +403,14 @@ object DCtrl extends LogHelper {
         }
         if (res.getCurrentNumber > 0) {
           DCtrl.instance.updateBlockHeight(res.getCurrentNumber)
-          (res.getCurrentNumber,res.getWantNumber)
+          (res.getCurrentNumber, res.getWantNumber)
         } else {
-          (res.getCurrentNumber,res.getWantNumber)
+          (res.getCurrentNumber, res.getWantNumber)
         }
 
       } else {
         DCtrl.instance.updateBlockHeight(b.getBlockHeight)
-        (b.getBlockHeight,b.getBlockHeight)
+        (b.getBlockHeight, b.getBlockHeight)
       }
     }) //synchronized
   }

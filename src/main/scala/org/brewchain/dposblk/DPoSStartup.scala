@@ -50,8 +50,7 @@ class DPoSBGLoader() extends Runnable with LogHelper {
       log.debug("Daos Or sockSender Not Ready..:pzp=" + Daos.pzp)
       Thread.sleep(1000);
     }
-    
-    
+
     var dposnet = Daos.pzp.networkByID("dpos")
 
     while (dposnet == null
@@ -67,27 +66,25 @@ class DPoSBGLoader() extends Runnable with LogHelper {
 
     //     Daos.actdb.getNodeAccount();
 
-	
     while (Daos.actdb.getNodeAccount == null) {
       log.debug("dpos cws account not ready. ")
       Thread.sleep(5000);
     }
     val naccount = Daos.actdb.getNodeAccount;
     Daos.actdb.onStart(dposnet.root().bcuid, dposnet.root().v_address, dposnet.root().name)
-    
+
     UUIDGenerator.setJVM(dposnet.root().bcuid.substring(1))
     dposnet.changeNodeVAddr(naccount);
     log.debug("dposnet.initOK:My Node=" + dposnet.root() + ",CoAddr=" + dposnet.root().v_address) // my node
 
     DCtrl.instance = DPosNodeController(dposnet);
+
     Scheduler.scheduleWithFixedDelay(DCtrl.instance, DConfig.INITDELAY_DCTRL_SEC,
-      Math.min(DConfig.TICK_DCTRL_MS,DConfig.BLK_EPOCH_MS)
-      , TimeUnit.MILLISECONDS)
-      
-     TxSync.instance = TransactionSync(dposnet);
-     Scheduler.scheduleWithFixedDelay(TxSync.instance, DConfig.INITDELAY_DCTRL_SEC,
-      Math.min(DConfig.TICK_DCTRL_MS_TX,DConfig.TXS_EPOCH_MS)
-      , TimeUnit.MILLISECONDS)
+      Math.min(DConfig.TICK_DCTRL_MS, DConfig.BLK_EPOCH_MS), TimeUnit.MILLISECONDS)
+
+    TxSync.instance = TransactionSync(dposnet);
+    Scheduler.scheduleWithFixedDelay(TxSync.instance, DConfig.INITDELAY_DCTRL_SEC,
+      Math.min(DConfig.TICK_DCTRL_MS_TX, DConfig.TXS_EPOCH_MS), TimeUnit.MILLISECONDS)
 
     //    Daos
     //    Scheduler.scheduleWithFixedDelay(RSM.instance, RConfig.INITDELAY_RSM_SEC,
