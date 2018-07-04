@@ -83,7 +83,7 @@ object DTask_DutyTermVote extends LogHelper {
     val realist = reclist.filter { p =>
       DCtrl.coMinerByUID.containsKey(p.getBcuid)
     };
-    log.debug("check db status:B[=" + vq.getBlockRange.getStartBlock + ","
+    log.debug("check db status:vq[=" + vq.getBlockRange.getStartBlock + ","
       + vq.getBlockRange.getEndBlock + "],T="
       + vq.getTermId
       + ",sign=" + vq.getSign
@@ -94,6 +94,7 @@ object DTask_DutyTermVote extends LogHelper {
       checkVoteDBList(records.get.size(), realist, vq);
     } else {
       clearRecords(reclist);
+      DCtrl.voteRequest().clear()
       false
     }
   }
@@ -234,7 +235,6 @@ object DTask_DutyTermVote extends LogHelper {
         (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getStartBlock)
         && vq.getTermId <= tm.getTermId + 1) {
         //        cn.setCominerStartBlock(1)
-
         val msgid = UUIDGenerator.generate();
         MDCSetMessageID(msgid);
         var canvote = if (JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) < DConfig.DTV_TIMEOUT_SEC &&
