@@ -82,7 +82,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
                 .setCoinbaseBcuid(cn.getBcuid).setSliceId(DCtrl.termMiner().getSliceId)
                 .setBlockHeader(newblk.build().toByteString())
                 //.setBlockMiner(newblk)
-                .setSign("TOLIUBODOSIGN"))
+                .setSign(newblk.getHeader.getBlockHash))
               .setSliceId(DCtrl.termMiner().getSliceId)
 
             //          log.debug("TRACE::BLKSH=["+Base64.encodeBase64String(newCoinbase.getBlockHeader.getBlockHeader.toByteArray())+"]");
