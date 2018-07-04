@@ -231,7 +231,7 @@ object DTask_DutyTermVote extends LogHelper {
       } else if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         || JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) > DConfig.DTV_TIMEOUT_SEC)
         && System.currentTimeMillis() > ban_for_vote_sec &&
-        (cn.getCurBlock + DConfig.DTV_BEFORE_BLK  >= tm.getBlockRange.getStartBlock)
+        (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getStartBlock)
         && vq.getTermId <= tm.getTermId + 1) {
         //        cn.setCominerStartBlock(1)
 
@@ -299,7 +299,7 @@ object DTask_DutyTermVote extends LogHelper {
     if (quantifyminers.size > 0) {
       val newterm = PSDutyTermVote.newBuilder();
       val conodescount = Math.min(quantifyminers.size, DConfig.DTV_MAX_SUPER_MINER);
-      val mineBlockCount = DConfig.DTV_MUL_BLOCKS_EACH_TERM * conodescount;
+      val mineBlockCount = DConfig.DTV_MUL_BLOCKS_EACH_TERM * conodescount * DConfig.DTV_BLOCKS_EACH_MINER;
       val startBlk = cn.getCurBlock + 1;
       newterm.setBlockRange(BlockRange.newBuilder()
         .setStartBlock(startBlk)
@@ -344,16 +344,18 @@ object DTask_DutyTermVote extends LogHelper {
         rdns.map { x =>
           if (newterm.getMinerQueueCount < mineBlockCount) {
             //              log.debug(" add miner at Queue," + x._2.getCoAddress + ",blockheight=" + i);
-            newterm.addMinerQueue(TermBlock.newBuilder().setBlockHeight(i)
-              .setMinerCoaddr(x._2.getCoAddress))
-            i = i + 1;
+            for (bi <- 1 to DConfig.DTV_BLOCKS_EACH_MINER) {
+              newterm.addMinerQueue(TermBlock.newBuilder().setBlockHeight(i)
+                .setMinerCoaddr(x._2.getCoAddress))
+              i = i + 1;
+            }
           }
         }
       }
 
       log.debug("try to vote:newterm=" + newterm.getTermId + ",curterm=" + tm.getTermId
         + ",tm_end_past=" + JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) + ",lastsig=" + tm.getSign
-        + ",sec,vN=" + DCtrl.coMinerByUID.size + ",cN=" + conodescount + ",sign=" + newterm.getSign + ",mineQ=" + newterm.getMinerQueueList.foldLeft(",")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr))
+        + ",sec,vN=" + DCtrl.coMinerByUID.size + ",cN=" + conodescount + ",sign=" + newterm.getSign + ",mineQ=" + newterm.getMinerQueueList.foldLeft("\n\t")((a, b) => a + "," + b.getBlockHeight + "=" + b.getMinerCoaddr))
       DCtrl.instance.vote_Request = newterm;
       network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), msgid);
       true

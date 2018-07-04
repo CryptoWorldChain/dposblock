@@ -90,7 +90,7 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
     if (cur_dnode.getCurBlock != Daos.actdb.getLastBlockNumber) {
       log.warn("dpos block height Info not Equal to AccountDB:c=" +
         cur_dnode.getCurBlock + " ==> a=" + Daos.actdb.getLastBlockNumber);
-      cur_dnode.setCurBlock(Daos.actdb.getLastBlockNumber)
+      cur_dnode.setCurBlock(Daos.actdb.getLastBlockNumber.intValue())
       syncToDB()
     }
 
@@ -403,10 +403,10 @@ object DCtrl extends LogHelper {
           }
         }
         if (res.getCurrentNumber > 0) {
-          DCtrl.instance.updateBlockHeight(res.getCurrentNumber)
-          (res.getCurrentNumber, res.getWantNumber)
+          DCtrl.instance.updateBlockHeight(res.getCurrentNumber.intValue())
+          (res.getCurrentNumber.intValue(), res.getWantNumber.intValue())
         } else {
-          (res.getCurrentNumber, res.getWantNumber)
+          (res.getCurrentNumber.intValue(), res.getWantNumber.intValue())
         }
 
       } else {

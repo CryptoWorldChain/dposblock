@@ -65,7 +65,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
             log.debug("mining error: ch=" + cn.getCurBlock);
             false;
           } else {
-            val newblockheight = newblk.getHeader.getNumber
+            val newblockheight = newblk.getHeader.getNumber.intValue()
             //        log.debug("MineNewBlock:" + newblk);
             log.debug("mining check ok :new block=" + newblockheight + ",CO=" + cn.getCoAddress
               + ",MaxTnx=" + DCtrl.termMiner().getMaxTnxEachBlock + ",hash=" + newblk.getHeader.getBlockHash);
