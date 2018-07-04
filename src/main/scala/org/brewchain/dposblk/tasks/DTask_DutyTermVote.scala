@@ -94,7 +94,10 @@ object DTask_DutyTermVote extends LogHelper {
       checkVoteDBList(records.get.size(), realist, vq);
     } else {
       clearRecords(reclist);
-      DCtrl.voteRequest().clear()
+      if(JodaTimeHelper.secondIntFromNow(vq.getTermStartMs) > DConfig.DTV_TIMEOUT_SEC){
+        DCtrl.voteRequest().clear()  
+      }
+      
       false
     }
   }
