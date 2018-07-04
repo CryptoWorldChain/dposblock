@@ -55,7 +55,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
         val lastBlkTime = Daos.blkHelper.GetBestBlock().getHeader.getTimestamp;
         if (Daos.txHelper.getOPendingHashMapDB.getStorage.size() == 0
           && (System.currentTimeMillis() - lastBlkTime) <
-          DConfig.BLK_NOOP_EPOCH_MS) { 
+          Math.min(DConfig.BLK_NOOP_EPOCH_MS, DConfig.MAX_WAIT_BLK_EPOCH_MS * 2 / 3)) {
           log.debug("My Miner term LOOP: ch=" + cn.getCurBlock + ",past=" + JodaTimeHelper.secondFromNow(lastBlkTime)
             + "s,loopms=" + DConfig.BLK_NOOP_EPOCH_MS);
           false

@@ -9,7 +9,7 @@ object DConfig {
 
   val _DBLK_EPOCH_SEC = prop.get(PROP_DOMAIN + "blk.epoch.sec", 1); //2 seconds each block
   val BLK_EPOCH_MS = prop.get(PROP_DOMAIN + "blk.epoch.ms", 500); //2 seconds each block
-  val BLK_NOOP_EPOCH_MS = prop.get(PROP_DOMAIN + "blk.noop.epoch.ms", 10000); //2 seconds each block
+  val BLK_NOOP_EPOCH_MS = prop.get(PROP_DOMAIN + "blk.noop.epoch.ms", 5000); //2 seconds each block
   
   val TXS_EPOCH_MS = prop.get(PROP_DOMAIN + "txs.epoch.ms", 500);
   val MAX_WAIT_BLK_EPOCH_MS = prop.get(PROP_DOMAIN + "max.wait.blk.epoch.ms", 10 * 1000); //1 min to wait for next block mine 
