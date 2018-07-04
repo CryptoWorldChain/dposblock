@@ -241,8 +241,7 @@ object DTask_DutyTermVote extends LogHelper {
           StringUtils.isNotBlank(tm.getSign) && tm.getCoNodes > 1) {
           val idx = (Math.abs(tm.getSign.hashCode()) % tm.getMinerQueueCount)
           tm.getMinerQueue(idx).getMinerCoaddr.equals(cn.getCoAddress)
-        } else 
-        {
+        } else {
           true
         }
         DCtrl.coMinerByUID.map(p => {
@@ -251,7 +250,7 @@ object DTask_DutyTermVote extends LogHelper {
             canvote = false;
           }
         })
-        if(tm.getMinerQueueList.filter { m => m.getMinerCoaddr.equals(cn.getCoAddress) }.size == 0){
+        if (tm.getMinerQueueCount > 0 && cn.getCurBlock > 0 && tm.getMinerQueueList.filter { m => m.getMinerCoaddr.equals(cn.getCoAddress) }.size == 0) {
           log.debug("cannot vote:term miner queue not include current:" + cn.getCoAddress);
           canvote = false;
         }
@@ -333,7 +332,7 @@ object DTask_DutyTermVote extends LogHelper {
           .setRewriteMs(System.currentTimeMillis()).setTermStartMs(tm.getTermStartMs))
       }
       newterm.setTermEndMs(System.currentTimeMillis() +
-          Math.max(DConfig.BLK_EPOCH_MS,DConfig.BLK_NOOP_EPOCH_MS) * mineBlockCount);
+        Math.max(DConfig.BLK_EPOCH_MS, DConfig.BLK_NOOP_EPOCH_MS) * mineBlockCount);
 
       newterm.setTermId(tm.getTermId + 1)
         .setLastTermId(tm.getTermId)
