@@ -231,7 +231,7 @@ object DTask_DutyTermVote extends LogHelper {
       } else if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         || JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) > DConfig.DTV_TIMEOUT_SEC)
         && System.currentTimeMillis() > ban_for_vote_sec &&
-        (cn.getCurBlock > tm.getBlockRange.getStartBlock)
+        (cn.getCurBlock + DConfig.DTV_BEFORE_BLK  >= tm.getBlockRange.getStartBlock)
         && vq.getTermId <= tm.getTermId + 1) {
         //        cn.setCominerStartBlock(1)
 
