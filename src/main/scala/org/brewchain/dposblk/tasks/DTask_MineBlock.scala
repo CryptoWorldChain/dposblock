@@ -52,7 +52,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
         false;
       } else if (isMyBlock) {
         MDCSetBCUID(network)
-        val lastBlkTime = Daos.blkHelper.GetBestBlock().getHeader.getTimestamp;
+        val lastBlkTime = if (cn.getCurBlock == 0) 0 else Daos.blkHelper.GetBestBlock().getHeader.getTimestamp;
         if (Daos.txHelper.getOPendingHashMapDB.getStorage.size() == 0
           && (System.currentTimeMillis() - lastBlkTime) <
           Math.min(DConfig.BLK_NOOP_EPOCH_MS, DConfig.MAX_WAIT_BLK_EPOCH_MS * 2 / 3)) {
