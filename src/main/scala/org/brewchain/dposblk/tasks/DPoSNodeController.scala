@@ -135,13 +135,15 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
       OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
   }
   def updateBlockHeight(blockHeight: Int) = {
-    Daos.blkHelper.synchronized({
-      //      if (cur_dnode.getCurBlock < blockHeight) {
-      cur_dnode.setLastBlockTime(System.currentTimeMillis())
-      cur_dnode.setCurBlock(blockHeight)
-      syncToDB()
-      //      }
-    })
+    if (blockHeight != cur_dnode.getCurBlock) {
+      Daos.blkHelper.synchronized({
+        //      if (cur_dnode.getCurBlock < blockHeight) {
+        cur_dnode.setLastBlockTime(System.currentTimeMillis())
+        cur_dnode.setCurBlock(blockHeight)
+        syncToDB()
+        //      }
+      })
+    }
   }
   def runOnce() = {
     Thread.currentThread().setName("DCTRL");
@@ -298,7 +300,7 @@ object DCtrl extends LogHelper {
       (false, false)
     } else {
       val lastBlkTime = if (block == 1) 0 else Daos.blkHelper.GetBestBlock().getHeader.getTimestamp;
-      val blkshouldMineMS =  tm.getEachBlockMs + lastBlkTime
+      val blkshouldMineMS = tm.getEachBlockMs + lastBlkTime
       val realblkMineMS = mineTime;
       val termblockLeft = block - tm.getEndBlock
       minerByBlockHeight(block) match {

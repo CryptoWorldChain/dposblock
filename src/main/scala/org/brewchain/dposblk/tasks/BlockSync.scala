@@ -27,7 +27,7 @@ object BlockSync extends LogHelper {
       }
     })
   }
-  def trySyncBlock(block_max_wanted: Int, fastNodeID: String)(implicit network: Network): Unit = {
+  def trySyncBlock(block_max_maybe_wanted: Int, fastNodeID: String)(implicit network: Network): Unit = {
     if (network.nodeByBcuid(fastNodeID) == network.noneNode) {
       log.debug("cannot sync log bcuid not found in dposnet:nodeid=" + fastNodeID + ":");
     } else {
@@ -36,25 +36,25 @@ object BlockSync extends LogHelper {
       //      log.debug("try sync block: Max block= " + block_max_wanted + ",cur=" + cn.getCurBlock + ",running=" + running.get)
       try {
         maxReqHeight.synchronized({
-          if (maxReqHeight.get > block_max_wanted) {
-            log.debug("not need to sync block: Max block=" + block_max_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
+          if (maxReqHeight.get > block_max_maybe_wanted) {
+            log.debug("not need to sync block: Max block=" + block_max_maybe_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
             return ;
           } else {
-            maxReqHeight.set(block_max_wanted)
+            maxReqHeight.set(block_max_maybe_wanted)
           }
         })
-        log.debug("try sync block: want max block= " + block_max_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
+        log.debug("try sync block: want max block= " + block_max_maybe_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
         var lastLogTime = 0L;
         var skipreq = false;
         while (!running.compareAndSet(false, true) && !skipreq) {
           try {
             if (System.currentTimeMillis() - lastLogTime > 10 * 1000) {
-              log.debug("waiting for runnerSyncBatch:curheight=" + cn.getCurBlock + ",runCounter=" + runCounter.get + ",wantblock= " + block_max_wanted + ",maxreqheight=" + maxReqHeight.get)
+              log.debug("waiting for runnerSyncBatch:curheight=" + cn.getCurBlock + ",runCounter=" + runCounter.get + ",wantblock= " + block_max_maybe_wanted + ",maxreqheight=" + maxReqHeight.get)
               lastLogTime = System.currentTimeMillis()
             }
             this.synchronized(this.wait(DConfig.SYNCBLK_WAITSEC_NEXTRUN))
-            if (maxReqHeight.get > block_max_wanted) {
-              log.debug("not need to sync block.: Max block=" + block_max_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
+            if (maxReqHeight.get > block_max_maybe_wanted) {
+              log.debug("not need to sync block.: Max block=" + block_max_maybe_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
               skipreq = true;
             }
           } catch {
@@ -63,12 +63,13 @@ object BlockSync extends LogHelper {
           }
         }
 
-        if (maxReqHeight.get > block_max_wanted) {
-          log.debug("not need to sync block.: Max block=" + block_max_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
+        if (maxReqHeight.get > block_max_maybe_wanted) {
+          log.debug("not need to sync block.: Max block=" + block_max_maybe_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
           skipreq = true;
         }
         if (!skipreq) {
           //request log.
+          val block_max_wanted = Math.min(cn.getCurBlock + DConfig.MAX_SYNC_BLOCKS,block_max_maybe_wanted);
           val pagecount =
             ((block_max_wanted - cn.getCurBlock) / DConfig.SYNCBLK_PAGE_SIZE).asInstanceOf[Int]
           +(if ((block_max_wanted - cn.getCurBlock) % DConfig.SYNCBLK_PAGE_SIZE == 0) 1 else 0)
@@ -116,7 +117,7 @@ object BlockSync extends LogHelper {
           }
           log.debug("finished init follow up logs:" + DCtrl.curDN().getCurBlock);
         } else {
-          log.debug("skip request follow up logs:" + DCtrl.curDN().getCurBlock + ",block_wanted=" + block_max_wanted
+          log.debug("skip request follow up logs:" + DCtrl.curDN().getCurBlock + ",block_wanted=" + block_max_maybe_wanted
             + ",from=" + fastNodeID);
         }
       } finally {
