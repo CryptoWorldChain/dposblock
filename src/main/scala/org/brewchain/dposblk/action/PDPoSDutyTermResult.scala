@@ -81,8 +81,8 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
         if (DTask_DutyTermVote.possibleTermID.size() < DConfig.MAX_POSSIBLE_TERMID) {
           DTask_DutyTermVote.possibleTermID.put(pbo.getTermId, pbo.getBcuid);
         }
-        log.debug("Get DPos Term Vote Result:du=" + cn.getDutyUid + ",T=" + pbo.getTermId
-          + ",sign=" + pbo.getSign + ",VA=" + pbo.getVoteAddress + ",FROM=" + pbo.getBcuid + ",Result=" + pbo.getResult);
+        log.debug("Get DPos Term Vote Result:du=" + cn.getDutyUid + ",PT=" + pbo.getTermId+",T="+DCtrl.termMiner().getTermId
+          + ",sign=" + pbo.getSign + ",VA=" + pbo.getVoteAddress + ",FROM=" + pbo.getBcuid + ",Result=" + pbo.getResult+",PB="+pbo.getCurBlock+",CB="+DCtrl.curDN().getCurBlock);
 
         //save bc info
 

@@ -239,11 +239,13 @@ object DTask_DutyTermVote extends LogHelper {
         //        cn.setCominerStartBlock(1)
         val msgid = UUIDGenerator.generate();
         MDCSetMessageID(msgid);
-        var canvote = if (JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) < DConfig.DTV_TIMEOUT_SEC &&
+        var canvote = if (JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) < DConfig.DTV_TIMEOUT_SEC &&
           StringUtils.isNotBlank(tm.getSign) && tm.getCoNodes > 1) {
           val idx = (Math.abs(tm.getSign.hashCode()) % tm.getMinerQueueCount)
           tm.getMinerQueue(idx).getMinerCoaddr.equals(cn.getCoAddress)
         } else {
+          log.debug("can vote:timepost="+JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime)+",DTVTIMOUT="+DConfig.DTV_TIMEOUT_SEC+",past.ensd="+
+              JodaTimeHelper.secondIntFromNow(tm.getTermEndMs));
           true
         }
         DCtrl.coMinerByUID.map(p => {
