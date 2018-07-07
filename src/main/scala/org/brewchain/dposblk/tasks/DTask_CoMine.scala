@@ -67,7 +67,7 @@ object DTask_CoMine extends LogHelper with BitMap {
                     fastNode = retjoin.getDn;
                   }
                 }
-                log.debug("get other nodeInfo:B=" + retjoin.getDn.getCurBlock + ",state=" + retjoin.getCoResult);
+                log.debug("get other nodeInfo:B=" + retjoin.getDn.getCurBlock + ",state=" + retjoin.getCoResult + ",bcuid=" + retjoin.getDn.getBcuid);
                 if (retjoin.getCoResult == DNodeState.DN_CO_MINER) {
                   DCtrl.coMinerByUID.put(retjoin.getDn.getBcuid, retjoin.getDn);
                 }
@@ -85,8 +85,8 @@ object DTask_CoMine extends LogHelper with BitMap {
         })
       }
     cdl.await();
-//    log.debug("get nodes:count=" + DCtrl.coMinerByUID.size + ",dposnetNodecount=" + network.directNodeByBcuid.size
-//      + ",maxheight=" + fastNode.getCurBlock);
+    //    log.debug("get nodes:count=" + DCtrl.coMinerByUID.size + ",dposnetNodecount=" + network.directNodeByBcuid.size
+    //      + ",maxheight=" + fastNode.getCurBlock);
     //remove off line
     DCtrl.coMinerByUID.filter(p => {
       network.nodeByBcuid(p._1) == network.noneNode
@@ -95,7 +95,7 @@ object DTask_CoMine extends LogHelper with BitMap {
       DCtrl.coMinerByUID.remove(p._1);
     }
     if (cn.getCurBlock + DConfig.BLOCK_DISTANCE_COMINE + 1 < DCtrl.termMiner().getBlockRange.getStartBlock
-        &&System.currentTimeMillis() < DCtrl.termMiner().getTermEndMs + DConfig.DTV_TIMEOUT_SEC*1000) {
+      && System.currentTimeMillis() < DCtrl.termMiner().getTermEndMs + DConfig.DTV_TIMEOUT_SEC * 1000) {
       log.debug("TermBlock large than local:T=[" + DCtrl.termMiner().getBlockRange.getStartBlock + "," + DCtrl.termMiner().getBlockRange.getEndBlock +
         "],DB=" + cn.getCurBlock);
       cn.setState(DNodeState.DN_SYNC_BLOCK)
@@ -111,11 +111,11 @@ object DTask_CoMine extends LogHelper with BitMap {
         })
         if (fastNode != null) {
           BlockSync.trySyncBlock(fastNode.getCurBlock, fastNode.getBcuid);
-          log.debug("get from other gcuid:"+fastNode.getBcuid);
-        }else{
+          log.debug("get from other gcuid:" + fastNode.getBcuid);
+        } else {
           log.debug("wait from other nodes online.");
         }
-        
+
         fastNode
       } else {
         BlockSync.trySyncBlock(fastNode.getCurBlock, fastNode.getBcuid);
@@ -128,7 +128,7 @@ object DTask_CoMine extends LogHelper with BitMap {
     } else if (cn.getCurBlock >= fastNode.getCurBlock
       && DCtrl.coMinerByUID.size > 0 && DCtrl.coMinerByUID.size >= network.directNodes.size * 2 / 3) {
       if (cn.getCurBlock >= tm.getBlockRange.getStartBlock &&
-        cn.getCurBlock <= tm.getBlockRange.getEndBlock) {
+        cn.getCurBlock <= tm.getBlockRange.getEndBlock && tm.getBlockRange.getEndBlock>1) {
         cn.setState(DNodeState.DN_CO_MINER)
         tm.getMinerQueueList.map { f =>
           if (cn.getState != DNodeState.DN_DUTY_MINER && f.getMinerCoaddr.equals(cn.getCoAddress)) {
@@ -145,6 +145,7 @@ object DTask_CoMine extends LogHelper with BitMap {
       }
       cn
     } else {
+      cn.setState(DNodeState.DN_SYNC_BLOCK)
       null
     }
 

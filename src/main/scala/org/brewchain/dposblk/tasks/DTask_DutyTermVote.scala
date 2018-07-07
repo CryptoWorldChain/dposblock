@@ -56,6 +56,7 @@ object DTask_DutyTermVote extends LogHelper {
   val possibleTermID = new ConcurrentHashMap[Long, String]();
 
   def checkPossibleTerm(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
+    var hasConverge = false;
     possibleTermID.map(f => {
       if (DCtrl.coMinerByUID.containsKey(f._2)) {
         val records = Daos.dposvotedb.listBySecondKey("D" + f._1);
@@ -64,13 +65,13 @@ object DTask_DutyTermVote extends LogHelper {
         };
         val realist = reclist.filter { p => DCtrl.coMinerByUID.containsKey(p.getBcuid) };
         if (realist.size > 0) {
-          checkVoteDBList(records.get.size(), realist, vq);
+          hasConverge = hasConverge || checkVoteDBList(records.get.size(), realist, vq);
         } else {
           possibleTermID.remove(f._1);
         }
       }
     })
-    false;
+    hasConverge;
   }
   def checkVoteDB(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
     val records = Daos.dposvotedb.listBySecondKey("D" + (vq.getTermId match {
@@ -94,10 +95,9 @@ object DTask_DutyTermVote extends LogHelper {
       checkVoteDBList(records.get.size(), realist, vq);
     } else {
       clearRecords(reclist);
-      if(JodaTimeHelper.secondIntFromNow(vq.getTermStartMs) > DConfig.DTV_TIMEOUT_SEC){
-        DCtrl.voteRequest().clear()  
+      if (JodaTimeHelper.secondIntFromNow(vq.getTermStartMs) > DConfig.DTV_TIMEOUT_SEC) {
+        DCtrl.voteRequest().clear()
       }
-      
       false
     }
   }
@@ -106,7 +106,6 @@ object DTask_DutyTermVote extends LogHelper {
     if (realist.size() == 0) {
       DCtrl.voteRequest().clear()
       checkPossibleTerm(vq);
-      false
     } else if ((recordsize + 1) >= vq.getCoNodes * DConfig.VOTE_QUORUM_RATIO / 100
       || (System.currentTimeMillis() - vq.getTermStartMs > DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000)) {
       //      log.debug("try to vote:" + records.get.size());

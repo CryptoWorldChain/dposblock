@@ -72,7 +72,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
             ((tm.getTermId <= pbo.getLastTermId) && tm.getTermId <= pbo.getTermId - 1
               && (
                 (pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getStartBlock && pbo.getRewriteTerm != null &&
-                  pbo.getRewriteTerm.getBlockLost > 0) //for revote
+                  pbo.getRewriteTerm.getBlockLost >= 0) //for revote
                   || pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock) // for continue vote
                   || StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) && pbo.getMinerQueueCount > 0) {
             //check quantifyminers

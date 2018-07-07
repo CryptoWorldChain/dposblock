@@ -39,7 +39,7 @@ object PDPoSNodeCoMineService extends LogHelper with PBUtils with LService[PSCoM
     var ret = PRetCoMine.newBuilder();
     if (!DCtrl.isReady() && !StringUtils.equals(pbo.getDn.getCoAddress,
       DCtrl.curDN().getCoAddress)) {
-      log.debug("DPoS not ready" + pack.getFrom())
+      log.debug("DPoS not ready:" + pack.getFrom()+",DCtrl.ready="+DCtrl.isReady())
       ret.setRetCode(-1).setRetMessage("DPoS Network Not READY")
       handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
     } else {

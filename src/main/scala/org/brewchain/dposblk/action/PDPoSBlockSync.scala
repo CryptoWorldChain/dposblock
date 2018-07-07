@@ -36,7 +36,7 @@ class PDPoSBlockSync extends PSMDPoSNet[PSSyncBlocks] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PDPoSBlockSyncService extends LogHelper with PBUtils with LService[PSSyncBlocks] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSSyncBlocks, handler: CompleteHandler) = {
-    log.debug("BlockSyncService:" + pack.getFrom())
+//    log.debug("BlockSyncService:" + pack.getFrom())
     var ret = PRetSyncBlocks.newBuilder();
     if (!DCtrl.isReady()) {
       ret.setRetCode(-1).setRetMessage("DPoS Network Not READY")
@@ -65,7 +65,7 @@ object PDPoSBlockSyncService extends LogHelper with PBUtils with LService[PSSync
           }
         }
 
-        log.debug("SyncToClient:"+(System.currentTimeMillis()-startTime));
+//        log.debug("SyncToClient:"+(System.currentTimeMillis()-startTime));
       } catch {
         case e: FBSException => {
           ret.clear()

@@ -82,6 +82,8 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
       cur_dnode.mergeFrom(ov.getExtdata)
       if (!StringUtils.equals(cur_dnode.getBcuid, root_node.bcuid)) {
         log.warn("load from dnode info not equals with pzp node:" + cur_dnode + ",root=" + root_node)
+        cur_dnode.setBcuid(root_node.bcuid);
+        syncToDB();
       } else {
         log.info("load from db:OK:" + cur_dnode)
       }
@@ -201,7 +203,7 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
                 + ",tq[" + term_Miner.getBlockRange.getStartBlock + "," + term_Miner.getBlockRange.getEndBlock + "]");
               continue = true;
               cur_dnode.setState(DNodeState.DN_SYNC_BLOCK);
-            } else if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock //|| DCtrl.voteRequest().getLastTermId >= term_Miner.getTermId
+            } else if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock && term_Miner.getBlockRange.getEndBlock > 1 //|| DCtrl.voteRequest().getLastTermId >= term_Miner.getTermId
             ) {
               log.debug("cur term force to end:" + cur_dnode.getCurBlock + ",vq[" + DCtrl.voteRequest().getBlockRange.getStartBlock
                 + "," + DCtrl.voteRequest().getBlockRange.getEndBlock + "]" + ",vqid=" + DCtrl.voteRequest().getTermId
@@ -228,7 +230,7 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
               }
             } else {
               //check who mining.
-              if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock) {
+              if (cur_dnode.getCurBlock >= term_Miner.getBlockRange.getEndBlock && term_Miner.getBlockRange.getEndBlock > 1) {
                 continue = true;
                 val sleept = Math.abs((Math.random() * 10000000 % DConfig.DTV_TIME_MS_EACH_BLOCK).asInstanceOf[Long]) + 10;
                 cur_dnode.setState(DNodeState.DN_CO_MINER);
