@@ -56,7 +56,7 @@ object PDCoinbase extends LogHelper with PBUtils with LService[PSCoinbase] with 
         if (!StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) {
           cn.synchronized {
             if (StringUtils.equals(pbo.getCoAddress, cn.getCoAddress) || pbo.getBlockHeight > cn.getCurBlock) {
-              if (pbo.getTermId > DCtrl.termMiner().getTermId ||
+              if (pbo.getTermId >= DCtrl.termMiner().getTermId ||
                 DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress, pbo.getMineTime)._1) {
                 val (acceptHeight , blockWant) = DCtrl.saveBlock(pbo.getBlockEntry) 
                 acceptHeight match {
@@ -82,7 +82,8 @@ object PDCoinbase extends LogHelper with PBUtils with LService[PSCoinbase] with 
                     ret.setResult(CoinbaseResult.CR_REJECT)
                 }
               } else {
-                log.debug("Miner not for the block:Block=" + pbo.getBlockHeight + ",CA=" + pbo.getCoAddress + ",sign=" + pbo.getBlockEntry.getSign + ",from=" + pbo.getBcuid);
+                log.debug("Miner not for the block:Block=" + pbo.getBlockHeight + ",CA=" + pbo.getCoAddress + ",sign=" + pbo.getBlockEntry.getSign + ",from=" + pbo.getBcuid
+                     +",PTID="+pbo.getTermId+",TID="+ DCtrl.termMiner().getTermId);
                 ret.setResult(CoinbaseResult.CR_REJECT)
               }
             } else {
