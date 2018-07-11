@@ -232,7 +232,7 @@ object DTask_DutyTermVote extends LogHelper {
           && tm.getTermId > 0) && JodaTimeHelper.secondIntFromNow(vq.getTermStartMs) <= DConfig.DTV_TIMEOUT_SEC)) {
         checkVoteDB(vq)
       } else if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
-        || JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) > DConfig.DTV_TIMEOUT_SEC)
+        || JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) > DConfig.DTV_TIMEOUT_SEC)
         && System.currentTimeMillis() > ban_for_vote_sec &&
         (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getStartBlock)
         && vq.getTermId <= tm.getTermId + 1) {
@@ -271,6 +271,7 @@ object DTask_DutyTermVote extends LogHelper {
           checkVoteDB(vq)
         }
       } else {
+        log.debug("cannot do vote ");
         checkVoteDB(vq)
       }
     })

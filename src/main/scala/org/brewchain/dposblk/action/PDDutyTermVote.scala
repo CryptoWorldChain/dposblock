@@ -67,7 +67,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
         ret.setVoteAddress(cn.getCoAddress)
 
         DTask_DutyTermVote.synchronized({
-          if ((StringUtils.isBlank(tm.getSign) || tm.getSign.equals(pbo.getLastTermUid)||StringUtils.equals(pbo.getBcuid, cn.getBcuid)) &&
+          if ((StringUtils.isBlank(tm.getSign) ||StringUtils.equals(pbo.getBcuid, cn.getBcuid)) &&
               (StringUtils.isBlank(vq.getSign) || vq.getTermId<pbo.getTermId||
                   StringUtils.equals(pbo.getBcuid, cn.getBcuid)) &&
             //            && StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
