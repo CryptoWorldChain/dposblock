@@ -36,11 +36,12 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
       val start = System.currentTimeMillis();
       val n = network.nodeByBcuid(fastNodeID);
       //find random node.
-      val dnodes = DCtrl.coMinerByUID.filter(f => f._2.getCurBlock >= endIdx && network.directNodeByBcuid.get(f._1) != network.noneNode)
+      val dnodes = DCtrl.coMinerByUID.filter(f => f._2.getCurBlock >= endIdx && network.directNodeByBcuid.get(f._1) != network.noneNode
+        && !f._1.equals(network.root().bcuid))
         .map(f => network.directNodeByBcuid.get(f._1).get)
       val randn = if (dnodes.size == 0) n else dnodes.toList.get((Math.abs(Math.random() * 100000) % dnodes.size).asInstanceOf[Int])
       if (randn == null || randn == network.noneNode) {
-        log.warn("cannot found node from Network:" + network.netid + ",bcuid=" + fastNodeID)
+        log.warn("cannot found node from Network:" + network.netid + ",bcuid=" + fastNodeID+",rand="+randn)
       } else {
         network.sendMessage("SYNDOB", sync, randn, new CallBack[FramePacket] {
           def onSuccess(fp: FramePacket) = {
