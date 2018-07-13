@@ -20,7 +20,7 @@ import org.brewchain.bcapi.exec.SRunner
 
 //获取其他节点的term和logidx，commitidx
 case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
-    network: Network, fastNodeID: String, 
+    network: Network, fastNodeID: String,
     runCounter: AtomicLong) extends SRunner with PMNodeHelper with LogHelper {
   def getName(): String = "SyncBlock:" + startIdx + "-" + (endIdx)
 
@@ -34,58 +34,63 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
       val sync = PSSyncBlocks.newBuilder().setStartId(startIdx)
         .setEndId(endIdx).setDn(DCtrl.curDN()).setMessageId(messageid).build()
       val start = System.currentTimeMillis();
-      val n = network.nodeByBcuid(fastNodeID);
-      if (n == null) {
-        log.warn("cannot found node from Network:" + network.netid + ",bcuid=" + fastNodeID)
-      } else {
+      //      val n = network.nodeByBcuid(fastNodeID);
+      //      if (n == null) {
+      //        log.warn("cannot found node from Network:" + network.netid + ",bcuid=" + fastNodeID)
+      //      } else {
 
-        network.sendMessage("SYNDOB", sync, n, new CallBack[FramePacket] {
-          def onSuccess(fp: FramePacket) = {
-            val end = System.currentTimeMillis();
-            MDCSetBCUID(DCtrl.dposNet());
-            MDCSetMessageID(messageid)
-            try {
-              if (fp.getBody == null) {
-                //sync Error.
-                log.debug("send SYNDOB error:to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx + ",ret=null")
-              } else {
-                val ret = PRetSyncBlocks.newBuilder().mergeFrom(fp.getBody);
-                log.debug("send SYNDOB success:to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx + ",ret=" +
-                  ret.getRetCode + ",count=" + ret.getBlockHeadersCount)
+      //find random node.
+      val dnodes = DCtrl.coMinerByUID.filter(f => f._2.getCurBlock >= endIdx && network.directNodeByBcuid.get(f._1) != network.noneNode)
+        .map(f => network.directNodeByBcuid.get(f._1).get)
+      val randn = dnodes.toList.get((Math.abs(Math.random() * 100000) % dnodes.size).asInstanceOf[Int])
 
-                if (ret.getRetCode() == 0) { //same message
+      network.sendMessage("SYNDOB", sync, randn, new CallBack[FramePacket] {
+        def onSuccess(fp: FramePacket) = {
+          val end = System.currentTimeMillis();
+          MDCSetBCUID(DCtrl.dposNet());
+          MDCSetMessageID(messageid)
+          try {
+            if (fp.getBody == null) {
+              //sync Error.
+              log.debug("send SYNDOB error:to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx + ",ret=null")
+            } else {
+              val ret = PRetSyncBlocks.newBuilder().mergeFrom(fp.getBody);
+              log.debug("send SYNDOB success:to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx + ",ret=" +
+                ret.getRetCode + ",count=" + ret.getBlockHeadersCount)
 
-                  var maxid: Int = 0
-                  val realmap = ret.getBlockHeadersList.filter { p => p.getBlockHeight >= startIdx && p.getBlockHeight <= endIdx }
-                  //            if (realmap.size() == endIdx - startIdx + 1) {
-                  log.debug("realBlockCount=" + realmap.size);
-                  realmap.map { b =>
-                    val (acceptedHeight,blockwanted) = DCtrl.saveBlock(b);
-                    if (acceptedHeight == b.getBlockHeight) {
-                      log.debug("sync block height ok=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
-                    } else {
-                      log.debug("sync block height failed=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
-                    }
-                    if (acceptedHeight > maxid) {
-                      maxid = acceptedHeight;
-                    }
+              if (ret.getRetCode() == 0) { //same message
+
+                var maxid: Int = 0
+                val realmap = ret.getBlockHeadersList.filter { p => p.getBlockHeight >= startIdx && p.getBlockHeight <= endIdx }
+                //            if (realmap.size() == endIdx - startIdx + 1) {
+                log.debug("realBlockCount=" + realmap.size);
+                realmap.map { b =>
+                  val (acceptedHeight, blockwanted) = DCtrl.saveBlock(b);
+                  if (acceptedHeight == b.getBlockHeight) {
+                    log.debug("sync block height ok=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
+                  } else {
+                    log.debug("sync block height failed=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
                   }
-                  DCtrl.instance.updateBlockHeight(maxid)
+                  if (acceptedHeight > maxid) {
+                    maxid = acceptedHeight;
+                  }
                 }
+                DCtrl.instance.updateBlockHeight(maxid)
               }
-            } catch {
-              case t: Throwable =>
-                log.warn("error In SyncBlock:" + t.getMessage, t);
             }
+          } catch {
+            case t: Throwable =>
+              log.warn("error In SyncBlock:" + t.getMessage, t);
           }
-          def onFailed(e: java.lang.Exception, fp: FramePacket) {
-            val end = System.currentTimeMillis();
-            MDCSetBCUID(DCtrl.dposNet());
-            MDCSetMessageID(messageid)
-            log.debug("send SYNDOB ERROR :to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx + n.uri + ",e=" + e.getMessage, e)
-          }
-        })
-      }
+        }
+        def onFailed(e: java.lang.Exception, fp: FramePacket) {
+          val end = System.currentTimeMillis();
+          MDCSetBCUID(DCtrl.dposNet());
+          MDCSetMessageID(messageid)
+          log.debug("send SYNDOB ERROR :to " + fastNodeID + ",cost=" + (end - start) + ",s=" + startIdx + ",e=" + endIdx +",uri="+ randn.uri + ",e=" + e.getMessage, e)
+        }
+      })
+      //      }
     } catch {
       case e: Throwable =>
         log.error("SyncError:" + e.getMessage, e)
