@@ -325,11 +325,11 @@ object DTask_DutyTermVote extends LogHelper {
 
       if (overridedBlock > 0 && StringUtils.isNotBlank(omitCoaddr)) {
         newterm.setCoNodes(newterm.getCoNodes - DCtrl.coMinerByUID.filter(p => p._2.getCoAddress.equals(omitCoaddr)).size)
-        log.debug("overrideBlockedVoteWithOmit!!TID=" + tm.getTermId + ",Tuid=" + tm.getSign + ",block=" + overridedBlock + ",cur=" + cn.getCurBlock);
+        log.debug("overrideBlockedVoteWithOmit!TID=" + tm.getTermId + ",Tuid=" + tm.getSign + ",block=" + overridedBlock + ",cur=" + cn.getCurBlock);
         newterm.setRewriteTerm(RewriteTerm.newBuilder().setBlockLost(overridedBlock)
           .setRewriteMs(System.currentTimeMillis()).setTermStartMs(tm.getTermStartMs))
       } else if (newterm.getBlockRange.getStartBlock <= tm.getBlockRange.getEndBlock) {
-        log.debug("overrideBlockedVoteRevote!!TID=" + tm.getTermId + ",TMuid=" + tm.getSign + ",NTMUID=" + newterm.getSign
+        log.debug("overrideBlockedVoteRevote!TID=" + tm.getTermId + ",TMuid=" + tm.getSign + ",NTMUID=" + newterm.getSign
           + ",TBS=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
           + ",NewTBS=[" + newterm.getBlockRange.getStartBlock + "," + newterm.getBlockRange.getEndBlock + "]"
           + ",cur=" + cn.getCurBlock);
