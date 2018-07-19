@@ -89,7 +89,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                 true
               } else {
                 log.debug("unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
-                  + ",cn=" + cn.getCurBlock + ",PID" + p._2.getTermId + ",TID=" + tm.getTermId + ",LTID=" + tm.getLastTermId
+                  + ",cn=" + cn.getCurBlock + ",PID=" + p._2.getTermId + ",TID=" + tm.getTermId + ",LTID=" + tm.getLastTermId
                   + ",pbtsign=" + p._2.getTermSign + ",tmsign=" + tm.getSign + ",lasttmsig=" + tm.getLastTermUid)
                 false;
               }).map(f =>

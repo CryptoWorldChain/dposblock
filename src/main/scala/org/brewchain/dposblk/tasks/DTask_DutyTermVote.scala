@@ -73,9 +73,9 @@ object DTask_DutyTermVote extends LogHelper {
     })
     hasConverge;
   }
-  def checkVoteDB(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
+  def checkVoteDB(vq: PSDutyTermVote.Builder, termId: Long = 0)(implicit network: Network): Boolean = {
     val records = Daos.dposvotedb.listBySecondKey("D" + (vq.getTermId match {
-      case 0 => DCtrl.termMiner().getTermId + 1
+      case 0 => Math.max(DCtrl.termMiner().getTermId + 1, termId);
       case _ => vq.getTermId
     }));
     val reclist: Buffer[PDutyTermResult.Builder] = records.get.map { p =>
@@ -239,19 +239,24 @@ object DTask_DutyTermVote extends LogHelper {
         //        cn.setCominerStartBlock(1)
         val msgid = UUIDGenerator.generate();
         MDCSetMessageID(msgid);
+
         var canvote = if (JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) < DConfig.DTV_TIMEOUT_SEC &&
           StringUtils.isNotBlank(tm.getSign) && tm.getCoNodes > 1) {
           val idx = (Math.abs(tm.getSign.hashCode()) % tm.getMinerQueueCount)
           tm.getMinerQueue(idx).getMinerCoaddr.equals(cn.getCoAddress)
         } else {
-          log.debug("can vote:timepost="+JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime)+",DTVTIMOUT="+DConfig.DTV_TIMEOUT_SEC+",past.ensd="+
-              JodaTimeHelper.secondIntFromNow(tm.getTermEndMs));
+          log.debug("can vote:timepost=" + JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) + ",DTVTIMOUT=" + DConfig.DTV_TIMEOUT_SEC + ",past.ensd=" +
+            JodaTimeHelper.secondIntFromNow(tm.getTermEndMs));
           true
         }
+        var maxtmid = tm.getTermId;
         DCtrl.coMinerByUID.map(p => {
           if (p._2.getTermId > tm.getTermId) {
             log.debug("cannot vote:termid=" + p._2.getTermId + "->" + p._2.getBcuid + ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
             canvote = false;
+            if (p._2.getTermId > maxtmid) {
+              maxtmid = p._2.getTermId;
+            }
           }
         })
         if (tm.getMinerQueueCount > 0 && cn.getCurBlock > 0 && tm.getMinerQueueList.filter { m => m.getMinerCoaddr.equals(cn.getCoAddress) }.size == 0) {
@@ -268,7 +273,7 @@ object DTask_DutyTermVote extends LogHelper {
         } else {
           log.debug("cannot vote Sec=" + JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) + ",DV=" + DConfig.DTV_TIMEOUT_SEC
             + ",co=" + tm.getCoNodes);
-          checkVoteDB(vq)
+          checkVoteDB(vq,maxtmid)
         }
       } else {
         log.debug("cannot do vote ");
