@@ -9,9 +9,12 @@ import java.util.concurrent.ScheduledFuture
 
 object Scheduler extends OLog {
   val scheduler = new ScheduledThreadPoolExecutor(100);
+  val schedulerForTx = new ScheduledThreadPoolExecutor(10);
+
   val schedulerManager = new ScheduledThreadPoolExecutor(10);
   def shutdown() {
     scheduler.shutdown()
+    schedulerForTx.shutdown()
   }
 
   val runnerByGroupAddr = new HashMap[String, HashMap[String, ScheduledFuture[_]]]();
@@ -21,6 +24,13 @@ object Scheduler extends OLog {
     delay: Long,
     unit: TimeUnit): ScheduledFuture[_] = {
     scheduler.scheduleWithFixedDelay(command, initialDelay, delay, unit);
+  }
+  
+  def scheduleWithFixedDelayTx(command: Runnable,
+    initialDelay: Long,
+    delay: Long,
+    unit: TimeUnit): ScheduledFuture[_] = {
+    schedulerForTx.scheduleWithFixedDelay(command, initialDelay, delay, unit);
   }
 
   def stopGroupRunners(group: String) {

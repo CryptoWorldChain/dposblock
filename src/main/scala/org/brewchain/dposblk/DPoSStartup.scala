@@ -83,7 +83,7 @@ class DPoSBGLoader() extends Runnable with LogHelper {
       Math.min(DConfig.TICK_DCTRL_MS, DConfig.BLK_EPOCH_MS), TimeUnit.MILLISECONDS)
 
     TxSync.instance = TransactionSync(dposnet);
-    Scheduler.scheduleWithFixedDelay(TxSync.instance, DConfig.INITDELAY_DCTRL_SEC,
+    Scheduler.scheduleWithFixedDelayTx(TxSync.instance, DConfig.INITDELAY_DCTRL_SEC,
       Math.min(DConfig.TICK_DCTRL_MS_TX, DConfig.TXS_EPOCH_MS), TimeUnit.MILLISECONDS)
 
     //    Daos
