@@ -91,7 +91,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
             cn.setCurBlock(newblockheight)
             DCtrl.instance.syncToDB()
 
-            network.dwallMessage("MINDOB", Left(newCoinbase.build()), msgid)
+            network.dwallMessage("MINDOB", Left(newCoinbase.build()), msgid,'9')
 
             true
           }
