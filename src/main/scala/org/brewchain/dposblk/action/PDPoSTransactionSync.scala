@@ -48,7 +48,6 @@ object PDPoSTransactionSyncService extends LogHelper with PBUtils with LService[
           var oMultiTransaction = MultiTransaction.newBuilder();
           oMultiTransaction.mergeFrom(Daos.enc.hexDec(x));
           if (!StringUtils.equals(DCtrl.curDN().getBcuid, oMultiTransaction.getTxNode().getBcuid)) {
-            log.debug("sync transaction, hash::" + oMultiTransaction.getTxHash())
             Daos.txHelper.syncTransaction(oMultiTransaction);
           }
         }

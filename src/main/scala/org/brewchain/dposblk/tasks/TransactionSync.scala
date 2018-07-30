@@ -35,7 +35,6 @@ object TxSync extends LogHelper  {
 //      log.debug("start broadcast transaction")
       val res = Daos.txHelper.getWaitSendTxToSend(DConfig.MAX_TNX_EACH_BROADCAST)
       if(res.getTxHexStrCount()>0) {
-        log.debug("ready to broadcast transaction, batch count::" + res.getTxHexStrCount())
         val msgid = UUIDGenerator.generate();
         val syncTransaction = PSSyncTransaction.newBuilder();
         
