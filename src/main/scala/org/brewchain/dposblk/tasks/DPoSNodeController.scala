@@ -382,11 +382,12 @@ object DCtrl extends LogHelper {
 
         if (res.getTxHashsCount > 0) {
           log.debug("must sync transaction first.");
+          val reqTx = PSGetTransaction.newBuilder();
           for (txHash <- res.getTxHashsList) {
-            val reqTx = PSGetTransaction.newBuilder().setTxHash(txHash).build();
+             reqTx.addTxHash(txHash);
+          }
             val miner = BlockEntity.parseFrom(b.getBlockHeader);
-            log.debug("sync transaction hash::" + txHash + " block miner::" + miner.getMiner.getBcuid);
-            dposNet().asendMessage("SRTDOB", reqTx, dposNet().directNodeByBcuid.get(miner.getMiner.getBcuid).get, new CallBack[FramePacket] {
+            dposNet().asendMessage("SRTDOB", reqTx.build(), dposNet().directNodeByBcuid.get(miner.getMiner.getBcuid).get, new CallBack[FramePacket] {
               def onSuccess(fp: FramePacket) = {
                 try {
                   val retTx = if (fp.getBody != null) {
@@ -395,11 +396,13 @@ object DCtrl extends LogHelper {
                     null;
                   }
                   if (retTx != null) {
-                    log.debug("sync transaction success, hash::" + txHash);
-                    Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(retTx.getTxContent).toBuilder(), false);
+                    for (x <- retTx.getTxContentList) {
+                        Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(x).toBuilder(), false);
+                    }
+                    log.debug("sync transaction all done total::" + retTx.getTxContentList.size());
+                    Daos.blkHelper.ApplyBlock(b.getBlockHeader)
                   }
                 } finally {
-                  log.debug("sync transaction done, hash::" + txHash);
                 }
               }
               def onFailed(e: java.lang.Exception, fp: FramePacket) {
@@ -407,7 +410,6 @@ object DCtrl extends LogHelper {
               }
             })
           }
-        }
         if (res.getCurrentNumber > 0) {
           DCtrl.instance.updateBlockHeight(res.getCurrentNumber.intValue())
           (res.getCurrentNumber.intValue(), res.getWantNumber.intValue())

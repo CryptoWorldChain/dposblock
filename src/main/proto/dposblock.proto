@@ -216,11 +216,11 @@ message PRetSyncTransaction {
 }
 
 message PSGetTransaction {
-	string txHash = 1;
+	repeated string txHash = 1;
 }
 
 message PRetGetTransaction {
 	int32 ret_code = 1;
 	string ret_message = 2;
-	bytes txContent = 3;	
+	repeated bytes txContent = 3;	
 }
