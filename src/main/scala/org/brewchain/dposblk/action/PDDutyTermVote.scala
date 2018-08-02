@@ -108,7 +108,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               if (pbo.getBlockRange.getStartBlock != tm.getBlockRange.getEndBlock + 1 && tm.getTermId > 0
                 && System.currentTimeMillis() - tm.getTermEndMs < DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
                 if (pbo.getRewriteTerm == null) {
-                  log.debug("Reject DPos TermVote block not a sequence,cn.duty=" + cn.getDutyUid + ",T=" + pbo.getTermId
+                  log.debug("Reject DPos TermVote block not a sequence,cn.duty=" + cn.getDutyUid + ",T=" + tm.getTermId + ",PT=" + pbo.getTermId
                     + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
                     + ",TU=" + tm.getSign + ",LTM=" + tm.getLastTermUid
                     + ",PU=" + pbo.getSign + ",PTM=" + pbo.getLastTermUid
@@ -138,8 +138,8 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               }
 
             if (!reject) {
-              if (pbo.getTermId == tm.getTermId + 1 && q.size > 0) {
-                log.debug("Reject DPos TermVote Miner not quntified,cn.duty=" + cn.getDutyUid + ",PT=" + pbo.getTermId
+              if (pbo.getTermId != tm.getTermId + 1 && q.size > 0) {
+                log.debug("Reject DPos TermVote Miner not quntified,cn.duty=" + cn.getDutyUid + ",T=" + tm.getTermId + ",PT=" + pbo.getTermId
                   + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
                   + ",TU=" + tm.getSign + ",LTM=" + tm.getLastTermUid
                   + ",PU=" + pbo.getSign + ",PTM=" + pbo.getLastTermUid
@@ -148,7 +148,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                 ret.setResult(VoteResult.VR_REJECT)
               } else {
                 if (cn.getCurBlock < pbo.getBlockRange.getStartBlock - 1) {
-                  log.debug("Grant DPos Term Vote but Block Height Not Ready:" + cn.getDutyUid + ",T=" + pbo.getTermId
+                  log.debug("Grant DPos Term Vote but Block Height Not Ready:" + cn.getDutyUid+ ",T=" + tm.getTermId + ",PT=" + pbo.getTermId
                     + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
                     + ",B=" + cn.getCurBlock + ",BS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock
                     + "],VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid
@@ -163,7 +163,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                   //                  BlockSync.tryBackgroundSyncLogs(pbo.getBlockRange.getStartBlock - 1, pbo.getBcuid)(net)
                 } else {
                   // 
-                  log.debug("Grant DPos Term Vote:" + cn.getDutyUid + ",T=" + pbo.getTermId
+                  log.debug("Grant DPos Term Vote:" + cn.getDutyUid + ",T=" + tm.getTermId + ",PT=" + pbo.getTermId
                     + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
                     + ",PBS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock + "]"
                     + ",TBS=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
