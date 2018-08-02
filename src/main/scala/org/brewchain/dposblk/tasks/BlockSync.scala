@@ -36,7 +36,7 @@ object BlockSync extends LogHelper {
       //      log.debug("try sync block: Max block= " + block_max_wanted + ",cur=" + cn.getCurBlock + ",running=" + running.get)
       try {
         maxReqHeight.synchronized({
-          if (maxReqHeight.get > block_max_maybe_wanted) {
+          if (maxReqHeight.get > block_max_maybe_wanted && cn.getCurBlock >= block_max_maybe_wanted) {
             log.debug("not need to sync block: Max block=" + block_max_maybe_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
             return ;
           } else {

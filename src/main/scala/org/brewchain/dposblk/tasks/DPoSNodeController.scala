@@ -387,7 +387,10 @@ object DCtrl extends LogHelper {
              reqTx.addTxHash(txHash);
           }
             val miner = BlockEntity.parseFrom(b.getBlockHeader);
-            dposNet().asendMessage("SRTDOB", reqTx.build(), dposNet().directNodeByBcuid.get(miner.getMiner.getBcuid).get, new CallBack[FramePacket] {
+            var oNetwork = dposNet().directNodeByBcuid.get(miner.getMiner.getBcuid)
+            dposNet().asendMessage("SRTDOB", reqTx.build()
+                , oNetwork.getOrElse(dposNet().directNodes.toList.filter { x => !x.bcuid.equals(DCtrl.curDN().getBcuid) }.toList.get(0))
+                , new CallBack[FramePacket] {
               def onSuccess(fp: FramePacket) = {
                 try {
                   val retTx = if (fp.getBody != null) {
