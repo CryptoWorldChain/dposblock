@@ -252,8 +252,7 @@ object DTask_DutyTermVote extends LogHelper {
         var maxtmid = tm.getTermId;
         DCtrl.coMinerByUID.map(p => {
           if (p._2.getTermId > tm.getTermId && p._2.getCurBlock > cn.getCurBlock) {
-            if(p._2.getTermId > tm.getTermId + DConfig.VOTE_MAX_TERM_DISTANCE)
-            {
+            if (p._2.getTermId > tm.getTermId + DConfig.VOTE_MAX_TERM_DISTANCE) {
               log.debug("cannot vote:termid=" + p._2.getTermId + "->" + p._2.getBcuid + ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
               canvote = false;
             }
@@ -381,6 +380,31 @@ object DTask_DutyTermVote extends LogHelper {
       log.debug("No more quaitify node can vote:");
       false
     }
+  }
+
+  def wallOutTermGrantResult(): Unit = {
+
+    val cn = DCtrl.curDN();
+    val tm = DCtrl.termMiner();
+    var ret = PDutyTermResult.newBuilder();
+    ret.setMessageId(tm.getMessageId);
+    ret.setBcuid(cn.getBcuid)
+    ret.setRetCode(0).setRetMessage("SUCCESS")
+    ret.setCurTermid(tm.getTermId).setCurBlock(cn.getCurBlock).setCurTermSign(tm.getSign)
+
+    val vq = DCtrl.voteRequest();
+    //
+    ret.setTermId(tm.getTermId)
+    ret.setSign(tm.getSign)
+    ret.setCurTermSign(tm.getSign);
+    ret.setVoteAddress(cn.getCoAddress)
+
+    ret.setResult(VoteResult.VR_APPLY)
+    ret.setTermId(tm.getTermId)
+    ret.setBcuid(cn.getBcuid)
+    ret.setSign(tm.getSign)
+    ret.setVoteAddress(cn.getCoAddress)
+
   }
 
 }

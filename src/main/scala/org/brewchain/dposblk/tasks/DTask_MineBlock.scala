@@ -97,6 +97,8 @@ object DTask_MineBlock extends LogHelper with BitMap {
           }
         }
       } else {
+        
+        
         log.debug("waiting for my mine block:" + (cn.getCurBlock + 1) + ",CO=" + cn.getCoAddress
           + ",sign=" + DCtrl.termMiner().getSign);
         false

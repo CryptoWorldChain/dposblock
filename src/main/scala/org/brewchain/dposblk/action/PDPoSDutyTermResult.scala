@@ -67,31 +67,30 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
         //              && (vq.getTermId == pbo.getTermId)) {
         // 
         //            val records = Daos.dposdb.listBySecondKey("D" + vq.getTermId + "-" + vq.getSign)
+        if (pbo.getResult != VoteResult.VR_APPLY) {
+          Daos.dposvotedb.put(
+            "V" + pbo.getTermId + "-" + pbo.getSign + "-"
+              + pbo.getBcuid,
+            OValue.newBuilder()
+              .setCount(pbo.getTermId)
+              .setSecondKey("D" + pbo.getTermId)
+              .setExtdata(pbo.toByteString())
+              .setInfo(pbo.getSign)
+              .setNonce(pbo.getResultValue).build())
 
-        Daos.dposvotedb.put(
-          "V" + pbo.getTermId + "-" + pbo.getSign + "-"
-            + pbo.getBcuid,
-          OValue.newBuilder()
-            .setCount(pbo.getTermId)
-            .setSecondKey("D" + pbo.getTermId)
-            .setExtdata(pbo.toByteString())
-            .setInfo(pbo.getSign)
-            .setNonce(pbo.getResultValue).build())
-     
-        if (DTask_DutyTermVote.possibleTermID.size() < DConfig.MAX_POSSIBLE_TERMID) {
-          DTask_DutyTermVote.possibleTermID.put(pbo.getTermId, pbo.getBcuid);
+          if (DTask_DutyTermVote.possibleTermID.size() < DConfig.MAX_POSSIBLE_TERMID) {
+            DTask_DutyTermVote.possibleTermID.put(pbo.getTermId, pbo.getBcuid);
+          }
+          log.debug("Get DPos Term Vote Result:du=" + cn.getDutyUid + ",PT=" + pbo.getTermId + ",T=" + DCtrl.termMiner().getTermId
+            + ",sign=" + pbo.getSign + ",VA=" + pbo.getVoteAddress + ",FROM=" + pbo.getBcuid + ",Result=" + pbo.getResult + ",PB=" + pbo.getCurBlock + ",CB=" + DCtrl.curDN().getCurBlock);
         }
-        log.debug("Get DPos Term Vote Result:du=" + cn.getDutyUid + ",PT=" + pbo.getTermId+",T="+DCtrl.termMiner().getTermId
-          + ",sign=" + pbo.getSign + ",VA=" + pbo.getVoteAddress + ",FROM=" + pbo.getBcuid + ",Result=" + pbo.getResult+",PB="+pbo.getCurBlock+",CB="+DCtrl.curDN().getCurBlock);
-
         //save bc info
-
         DCtrl.coMinerByUID.get(pbo.getBcuid) match {
           case Some(p) =>
+            log.debug("update term:"+pbo.getCurTermid+",for bcuid="+pbo.getBcuid)
             DCtrl.coMinerByUID.put(pbo.getBcuid, p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(pbo.getCurTermid).setTermSign(pbo.getCurTermSign).build());
           case None =>
         }
-
         DTask_DutyTermVote.synchronized({
           DTask_DutyTermVote.notifyAll()
         })

@@ -332,6 +332,15 @@ object DCtrl extends LogHelper {
               //                + ",TermLeft=" + termblockLeft);
               if (realblkMineMS < blkshouldMineMS) {
                 Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
+              } else {
+                //request block if not sync
+                var bestfastUID = ""
+                coMinerByUID.map { f =>
+                  if (f._2.getCoAddress.equals(n)) {
+                    bestfastUID = f._2.getBcuid;
+                  }
+                }
+                BlockSync.tryBackgroundSyncLogs(block, bestfastUID)(dposNet());
               }
               (false, false)
             }
@@ -384,55 +393,51 @@ object DCtrl extends LogHelper {
           log.debug("must sync transaction first.");
           val reqTx = PSGetTransaction.newBuilder();
           for (txHash <- res.getTxHashsList) {
-             reqTx.addTxHash(txHash);
+            reqTx.addTxHash(txHash);
           }
           val miner = BlockEntity.parseFrom(b.getBlockHeader);
-           
-            
-            
-            // DCtrl.coMinerByUID.find(p => { p._2.getCurBlock > curDN().getCurBlock) {
-              // val randomNode = dposNet().directNodes.filter { x => !x.bcuid.equals(DCtrl.curDN().getBcuid ) }.toList
-              var oNetwork = dposNet().directNodeByBcuid.get(miner.getMiner.getBcuid)
-              if (!oNetwork.nonEmpty) {
-                log.warn("not found block minner")
-                val blockNode = DCtrl.coMinerByUID.filter(p =>p._2.getCurBlock > curDN().getCurBlock).toList
-                if (blockNode.size != 0) {
-                  oNetwork = dposNet().directNodeByBcuid.get(blockNode.get(0)._2.getBcuid);
-                } else {
-                   log.warn("random block minner")
-                   val randomNode = dposNet().directNodes.filter { x => !x.bcuid.equals(DCtrl.curDN().getBcuid ) }.toList
-                   oNetwork = Option(randomNode.get(scala.util.Random.nextInt(randomNode.size)));
-                }
-              }
-              // .getOrElse(randomNode.get(scala.util.Random.nextInt(randomNode.size)))
-              dposNet().asendMessage("SRTDOB", reqTx.build()
-                , oNetwork.get
-                , new CallBack[FramePacket] {
-              def onSuccess(fp: FramePacket) = {
-                try {
-                  val retTx = if (fp.getBody != null) {
-                    PRetGetTransaction.newBuilder().mergeFrom(fp.getBody);
-                  } else {
-                    log.warn("not found sync transaction");
-                    null;
-                  }
-                  if (retTx != null) {
-                    for (x <- retTx.getTxContentList) {
-                        Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(x).toBuilder(), false);
-                    }
-                    log.debug("sync transaction all done total::" + retTx.getTxContentList.size());
-                    Daos.blkHelper.ApplyBlock(b.getBlockHeader)
-                  }
-                } finally {
-                }
-              }
-              def onFailed(e: java.lang.Exception, fp: FramePacket) {
-                log.debug("sync transaction error::" + e.getMessage, e)
-              }
-            })
-            //} 
-            //})
+
+          // DCtrl.coMinerByUID.find(p => { p._2.getCurBlock > curDN().getCurBlock) {
+          // val randomNode = dposNet().directNodes.filter { x => !x.bcuid.equals(DCtrl.curDN().getBcuid ) }.toList
+          var oNetwork = dposNet().directNodeByBcuid.get(miner.getMiner.getBcuid)
+          if (!oNetwork.nonEmpty) {
+            log.warn("not found block minner")
+            val blockNode = DCtrl.coMinerByUID.filter(p => p._2.getCurBlock > curDN().getCurBlock).toList
+            if (blockNode.size != 0) {
+              oNetwork = dposNet().directNodeByBcuid.get(blockNode.get(0)._2.getBcuid);
+            } else {
+              log.warn("random block minner")
+              val randomNode = dposNet().directNodes.filter { x => !x.bcuid.equals(DCtrl.curDN().getBcuid) }.toList
+              oNetwork = Option(randomNode.get(scala.util.Random.nextInt(randomNode.size)));
+            }
           }
+          // .getOrElse(randomNode.get(scala.util.Random.nextInt(randomNode.size)))
+          dposNet().asendMessage("SRTDOB", reqTx.build(), oNetwork.get, new CallBack[FramePacket] {
+            def onSuccess(fp: FramePacket) = {
+              try {
+                val retTx = if (fp.getBody != null) {
+                  PRetGetTransaction.newBuilder().mergeFrom(fp.getBody);
+                } else {
+                  log.warn("not found sync transaction");
+                  null;
+                }
+                if (retTx != null) {
+                  for (x <- retTx.getTxContentList) {
+                    Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(x).toBuilder(), false);
+                  }
+                  log.debug("sync transaction all done total::" + retTx.getTxContentList.size());
+                  Daos.blkHelper.ApplyBlock(b.getBlockHeader)
+                }
+              } finally {
+              }
+            }
+            def onFailed(e: java.lang.Exception, fp: FramePacket) {
+              log.debug("sync transaction error::" + e.getMessage, e)
+            }
+          })
+          //} 
+          //})
+        }
         if (res.getCurrentNumber > 0) {
           DCtrl.instance.updateBlockHeight(res.getCurrentNumber.intValue())
           (res.getCurrentNumber.intValue(), res.getWantNumber.intValue())

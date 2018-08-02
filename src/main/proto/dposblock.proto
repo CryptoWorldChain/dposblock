@@ -17,11 +17,12 @@ enum PCommand {
 	
 	SYN = 5; //同步block
 	
-	VFY = 6;	 //块校验
+	VFY = 6;  //块校验
 	
 	PVR = 7; //PBFT轮训记账投票结果
 	BRT = 8; //同步交易
 	SRT = 9; //同步单笔交易
+
 	TTT = 30;//ping,pong,wall ,testing
 };
 
@@ -166,7 +167,8 @@ message  PDutyTermResult{
 	
 	enum VoteResult {
 		VR_GRANTED = 0;
-		VR_REJECT = 1;
+		VR_REJECT = 1; 
+		VR_APPLY = 2; //已经应用了
 	}
 	VoteResult	result = 3;
 	int64 	term_id = 4;
