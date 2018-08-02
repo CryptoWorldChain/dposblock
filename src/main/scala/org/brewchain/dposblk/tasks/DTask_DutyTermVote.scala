@@ -251,7 +251,7 @@ object DTask_DutyTermVote extends LogHelper {
         }
         var maxtmid = tm.getTermId;
         DCtrl.coMinerByUID.map(p => {
-          if (p._2.getTermId > tm.getTermId) {
+          if (p._2.getTermId > tm.getTermId + DConfig.VOTE_MAX_TERM_DISTANCE && p._2.getCurBlock > cn.getCurBlock) {
             log.debug("cannot vote:termid=" + p._2.getTermId + "->" + p._2.getBcuid + ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
             canvote = false;
             if (p._2.getTermId > maxtmid) {
@@ -273,7 +273,7 @@ object DTask_DutyTermVote extends LogHelper {
         } else {
           log.debug("cannot vote Sec=" + JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) + ",DV=" + DConfig.DTV_TIMEOUT_SEC
             + ",co=" + tm.getCoNodes);
-          checkVoteDB(vq,maxtmid)
+          checkVoteDB(vq, maxtmid)
         }
       } else {
         log.debug("cannot do vote ");
