@@ -386,16 +386,34 @@ object DCtrl extends LogHelper {
           for (txHash <- res.getTxHashsList) {
              reqTx.addTxHash(txHash);
           }
-            val miner = BlockEntity.parseFrom(b.getBlockHeader);
-            var oNetwork = dposNet().directNodeByBcuid.get(miner.getMiner.getBcuid)
-            dposNet().asendMessage("SRTDOB", reqTx.build()
-                , oNetwork.getOrElse(dposNet().directNodes.toList.filter { x => !x.bcuid.equals(DCtrl.curDN().getBcuid) }.toList.get(0))
+          val miner = BlockEntity.parseFrom(b.getBlockHeader);
+           
+            
+            
+            // DCtrl.coMinerByUID.find(p => { p._2.getCurBlock > curDN().getCurBlock) {
+              // val randomNode = dposNet().directNodes.filter { x => !x.bcuid.equals(DCtrl.curDN().getBcuid ) }.toList
+              var oNetwork = dposNet().directNodeByBcuid.get(miner.getMiner.getBcuid)
+              if (!oNetwork.nonEmpty) {
+                log.warn("not found block minner")
+                val blockNode = DCtrl.coMinerByUID.filter(p =>p._2.getCurBlock > curDN().getCurBlock).toList
+                if (blockNode.size != 0) {
+                  oNetwork = dposNet().directNodeByBcuid.get(blockNode.get(0)._2.getBcuid);
+                } else {
+                   log.warn("random block minner")
+                   val randomNode = dposNet().directNodes.filter { x => !x.bcuid.equals(DCtrl.curDN().getBcuid ) }.toList
+                   oNetwork = Option(randomNode.get(scala.util.Random.nextInt(randomNode.size)));
+                }
+              }
+              // .getOrElse(randomNode.get(scala.util.Random.nextInt(randomNode.size)))
+              dposNet().asendMessage("SRTDOB", reqTx.build()
+                , oNetwork.get
                 , new CallBack[FramePacket] {
               def onSuccess(fp: FramePacket) = {
                 try {
                   val retTx = if (fp.getBody != null) {
                     PRetGetTransaction.newBuilder().mergeFrom(fp.getBody);
                   } else {
+                    log.warn("not found sync transaction");
                     null;
                   }
                   if (retTx != null) {
@@ -412,6 +430,8 @@ object DCtrl extends LogHelper {
                 log.debug("sync transaction error::" + e.getMessage, e)
               }
             })
+            //} 
+            //})
           }
         if (res.getCurrentNumber > 0) {
           DCtrl.instance.updateBlockHeight(res.getCurrentNumber.intValue())
