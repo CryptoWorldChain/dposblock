@@ -382,7 +382,7 @@ object DTask_DutyTermVote extends LogHelper {
     }
   }
 
-  def wallOutTermGrantResult(): Unit = {
+  def wallOutTermGrantResult(implicit network: Network): Unit = {
 
     val cn = DCtrl.curDN();
     val tm = DCtrl.termMiner();
@@ -404,7 +404,7 @@ object DTask_DutyTermVote extends LogHelper {
     ret.setBcuid(cn.getBcuid)
     ret.setSign(tm.getSign)
     ret.setVoteAddress(cn.getCoAddress)
-
+    network.wallOutsideMessage("DTRDOB", Left(ret.build()), tm.getMessageId,9);
   }
 
 }
