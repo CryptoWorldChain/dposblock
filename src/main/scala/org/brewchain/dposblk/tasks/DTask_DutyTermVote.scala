@@ -148,6 +148,7 @@ object DTask_DutyTermVote extends LogHelper {
                     DCtrl.instance.term_Miner = dbtempvote
                     DCtrl.instance.updateTerm()
                     hasConverge = true;
+
                     true
                   } else if (n == VoteResult.VR_REJECT) {
                     clearRecords(votelist);
@@ -202,6 +203,8 @@ object DTask_DutyTermVote extends LogHelper {
         DCtrl.voteRequest().clear()
         DCtrl.curDN().clearDutyUid();
         sleepToNextVote();
+      } else if (hasConverge) {
+        wallOutTermGrantResult(network);
       }
       hasConverge
     } else {
@@ -404,7 +407,7 @@ object DTask_DutyTermVote extends LogHelper {
     ret.setBcuid(cn.getBcuid)
     ret.setSign(tm.getSign)
     ret.setVoteAddress(cn.getCoAddress)
-    network.wallOutsideMessage("DTRDOB", Left(ret.build()), tm.getMessageId,9);
+    network.wallOutsideMessage("DTRDOB", Left(ret.build()), tm.getMessageId, 9);
   }
 
 }
