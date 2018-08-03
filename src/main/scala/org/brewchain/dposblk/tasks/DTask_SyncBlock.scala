@@ -36,10 +36,16 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
       val start = System.currentTimeMillis();
       val n = network.nodeByBcuid(fastNodeID);
       //find random node.
-      val dnodes = DCtrl.coMinerByUID.filter(f => f._2.getCurBlock >= endIdx && network.directNodeByBcuid.get(f._1) != network.noneNode
-        && !f._1.equals(network.root().bcuid))
+      val dnodes = DCtrl.coMinerByUID.filter(f => f._2.getCurBlock >= endIdx 
+          && network.directNodeByBcuid.get(f._1).nonEmpty 
+          && network.directNodeByBcuid.get(f._1) != network.noneNode
+          && !f._1.equals(network.root().bcuid))
         .map(f => network.directNodeByBcuid.get(f._1).get)
-      val randn = if (dnodes.size == 0) n else dnodes.toList.get((Math.abs(Math.random() * 100000) % dnodes.size).asInstanceOf[Int])
+        
+      val randn = if (dnodes.size == 0) { 
+        log.warn("dnodes size is 0")
+          n 
+        } else dnodes.toList.get((Math.abs(Math.random() * 100000) % dnodes.size).asInstanceOf[Int])
       if (randn == null || randn == network.noneNode) {
         log.warn("cannot found node from Network:" + network.netid + ",bcuid=" + fastNodeID+",rand="+randn)
       } else {
@@ -65,7 +71,7 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
                   log.debug("realBlockCount=" + realmap.size);
                   realmap.map { b =>
                     val (acceptedHeight, blockwanted) = DCtrl.saveBlock(b);
-                    if (acceptedHeight == b.getBlockHeight) {
+                    if (acceptedHeight >= b.getBlockHeight) {
                       log.debug("sync block height ok=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
                     } else {
                       log.debug("sync block height failed=" + b.getBlockHeight + ",dbh=" + acceptedHeight);

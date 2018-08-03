@@ -49,6 +49,12 @@ object Scheduler extends OLog {
   def runOnce(runner: Runnable): Unit = {
     scheduler.submit(runner);
   }
+//  def runManager(command: Runnable,
+//    initialDelay: Long,
+//    delay: Long,
+//    unit: TimeUnit): Unit = {
+//    schedulerManager.scheduleWithFixedDelay(command, initialDelay, delay, unit)
+//  }
   def runManager(runner: Runnable): Unit = {
     schedulerManager.submit(runner);
   }
