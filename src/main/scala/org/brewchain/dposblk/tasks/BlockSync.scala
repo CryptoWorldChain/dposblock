@@ -109,6 +109,7 @@ object BlockSync extends LogHelper {
                 case e: Throwable =>
               }
             }
+            log.debug("syncblocklog --> runCounter.get:" + runCounter.get)
             if (!runed) {
               log.debug("syncblocklog --> rerun sync task")
               runCounter.incrementAndGet();
