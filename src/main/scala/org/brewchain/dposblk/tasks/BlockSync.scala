@@ -38,6 +38,7 @@ object BlockSync extends LogHelper {
       //
       //      log.debug("try sync block: Max block= " + block_max_wanted + ",cur=" + cn.getCurBlock + ",running=" + running.get)
       try {
+        log.debug("syncblocklog --> try sync block: want max block= " + block_max_maybe_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
         maxReqHeight.synchronized({
           if (maxReqHeight.get > block_max_maybe_wanted && cn.getCurBlock >= block_max_maybe_wanted) {
             log.debug("not need to sync block: Max block=" + block_max_maybe_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
@@ -46,7 +47,6 @@ object BlockSync extends LogHelper {
             maxReqHeight.set(block_max_maybe_wanted)
           }
         })
-        log.debug("syncblocklog --> try sync block: want max block= " + block_max_maybe_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
         var lastLogTime = 0L;
         var skipreq = false;
         while (!running.compareAndSet(false, true) && !skipreq) {
@@ -70,14 +70,13 @@ object BlockSync extends LogHelper {
           log.debug("not need to sync block.: Max block=" + block_max_maybe_wanted + ",maxreqheight=" + maxReqHeight.get + ",cur=" + cn.getCurBlock + ",running=" + running.get)
           skipreq = true;
         }
+        
         if (!skipreq) {
-          //request log.
           val block_max_wanted = Math.min(cn.getCurBlock + DConfig.MAX_SYNC_BLOCKS,block_max_maybe_wanted);
           val pagecount =
-            ((block_max_wanted - cn.getCurBlock) / DConfig.SYNCBLK_PAGE_SIZE).asInstanceOf[Int]
-          +(if ((block_max_wanted - cn.getCurBlock) % DConfig.SYNCBLK_PAGE_SIZE == 0) 1 else 0)
+              ((block_max_wanted - cn.getCurBlock) / DConfig.SYNCBLK_PAGE_SIZE).asInstanceOf[Int]
+              +(if ((block_max_wanted - cn.getCurBlock) % DConfig.SYNCBLK_PAGE_SIZE == 0) 1 else 0)
 
-          //        val cdlcount = Math.min(RConfig.SYNCLOG_MAX_RUNNER, pagecount)
           var cc = cn.getCurBlock + 1;
           while (cc <= block_max_wanted) {
             log.debug("syncblocklog --> DTask_SyncBlock cc:"+ cc + " endidx:" + Math.min(cc + DConfig.SYNCBLK_PAGE_SIZE - 1, block_max_wanted))

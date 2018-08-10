@@ -56,8 +56,11 @@ object PDCoinbase extends LogHelper with PBUtils with LService[PSCoinbase] with 
         if (!StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) {
           cn.synchronized {
             if (StringUtils.equals(pbo.getCoAddress, cn.getCoAddress) || pbo.getBlockHeight > cn.getCurBlock) {
+              
+             log.debug("checkMiner --> coinbase pbo.getBlockHeight::" + pbo.getBlockHeight);
+
               if (pbo.getTermId >= DCtrl.termMiner().getTermId ||
-                DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress, pbo.getMineTime)._1) {
+                DCtrl.checkMiner(pbo.getBlockHeight, pbo.getCoAddress, pbo.getMineTime, Thread.currentThread().getName() )._1) {
                 val (acceptHeight , blockWant) = DCtrl.saveBlock(pbo.getBlockEntry) 
                 acceptHeight match {
                   case n if n > 0 && n < pbo.getBlockHeight =>

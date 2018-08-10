@@ -69,7 +69,7 @@ object DConfig {
 
   val MAX_SYNC_BLOCKS = prop.get(PROP_DOMAIN + "max.sync.blocks", 3000);
   
-   val VOTE_MAX_TERM_DISTANCE = prop.get(PROP_DOMAIN + "vote.max.term.distance", 10);
+   val VOTE_MAX_TERM_DISTANCE = prop.get(PROP_DOMAIN + "vote.max.term.distance", 1);
 
 
 }

@@ -80,7 +80,10 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
                       maxid = acceptedHeight;
                     }
                   }
-                  DCtrl.instance.updateBlockHeight(maxid)
+                  log.debug("checkMiner --> maxid::"+ maxid)
+                  if (maxid > 0) {
+                    DCtrl.instance.updateBlockHeight(maxid)
+                  }
                 }
               }
             } catch {

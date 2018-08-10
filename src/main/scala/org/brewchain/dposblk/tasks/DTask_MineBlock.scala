@@ -35,8 +35,11 @@ object DTask_MineBlock extends LogHelper with BitMap {
       val msgid = UUIDGenerator.generate();
       val cn = DCtrl.instance.cur_dnode;
       val curtime = System.currentTimeMillis();
+      log.debug("checkMiner --> call cn::" + cn);
       val (isMyBlock, isOverride) = DCtrl.checkMiner(cn.getCurBlock + 1, cn.getCoAddress, curtime,
-        DConfig.BLK_EPOCH_MS);
+        Thread.currentThread().getName ,DConfig.BLK_EPOCH_MS);
+      log.debug("checkMiner --> isMyBlock::" + isMyBlock + " isOverride::" + isOverride)
+
       if (isOverride) {
         //try to vote...
         //
@@ -91,6 +94,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
             cn.setCurBlock(newblockheight)
             DCtrl.instance.syncToDB()
 
+            log.debug("mindob newblockheight::" + newblockheight + " cn.getCoAddress::" + cn.getCoAddress + " termid::" + DCtrl.termMiner().getTermId + " cn.getBcuid::" + cn.getBcuid)
             network.dwallMessage("MINDOB", Left(newCoinbase.build()), msgid,'9')
 
             true

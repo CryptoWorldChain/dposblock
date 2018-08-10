@@ -137,11 +137,14 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
       OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
   }
   def updateBlockHeight(blockHeight: Int) = {
+    log.debug("checkMiner --> updateBlockHeight blockHeight::" + blockHeight + " cur_dnode.getCurBlock::" + cur_dnode.getCurBlock );
     if (blockHeight != cur_dnode.getCurBlock) {
+      
       Daos.blkHelper.synchronized({
         //      if (cur_dnode.getCurBlock < blockHeight) {
         cur_dnode.setLastBlockTime(System.currentTimeMillis())
-        cur_dnode.setCurBlock(blockHeight)
+        //cur_dnode.setCurBlock(blockHeight)
+        cur_dnode.setCurBlock(Daos.actdb.getLastBlockNumber.intValue());
         syncToDB()
         //      }
       })
@@ -287,12 +290,14 @@ object DCtrl extends LogHelper {
       instance.cur_dnode.getStateValue > DNodeState.DN_INIT_VALUE
   }
 
-  def checkMiner(block: Int, coaddr: String, mineTime: Long, maxWaitMS: Long = 1L): (Boolean, Boolean) = {
+  def checkMiner(block: Int, coaddr: String, mineTime: Long, threadName: String, maxWaitMS: Long = 1L): (Boolean, Boolean) = {
     val tm = termMiner().getBlockRange;
+    log.debug("checkMiner --> block::" + block + " curDN.getCurBlock::" + curDN.getCurBlock + " tm.getEndBlock::" + tm.getEndBlock + " tm.getStartBlock::" + tm.getStartBlock + " coaddr::" + coaddr)
     if (block > tm.getEndBlock || block < tm.getStartBlock) {
       log.debug("checkMiner:False,block too large:" + block + ",[" + tm.getStartBlock + "," + tm.getEndBlock + "],sign="
         + termMiner.getSign + ",TID=" + termMiner.getTermId)
       val maxblk = Math.max(block, tm.getEndBlock)
+      log.debug("checkMiner --> maxblk::" + maxblk + " curDN.getCurBlock::" + curDN.getCurBlock)
       if (maxblk > curDN.getCurBlock) {
         val fastuid = DCtrl.getFastNode();
         if (!StringUtils.equals(fastuid, curDN.getBcuid)) {
@@ -313,9 +318,10 @@ object DCtrl extends LogHelper {
                 + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign + ",bh=" + block);
               Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
             }
+            log.debug("checkMiner --> realblkMineMS::" + realblkMineMS + " blkshouldMineMS::" + blkshouldMineMS + " n::" + n + " coaddr::" + coaddr)
             (true, false)
           } else {
-            if (realblkMineMS > blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) {
+            if (block > 1 && realblkMineMS > blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) {
               minerByBlockHeight(block + ((realblkMineMS - blkshouldMineMS) / DConfig.MAX_WAIT_BLK_EPOCH_MS).asInstanceOf[Int]) match {
                 case Some(nn) =>
                   log.debug("Override miner for Next:check:" + blkshouldMineMS + ",realblkmine=" + realblkMineMS + ",n=" + n
@@ -439,13 +445,14 @@ object DCtrl extends LogHelper {
           //})
         }
         if (res.getCurrentNumber > 0) {
+          log.debug("checkMiner --> updateBlockHeight::"+ res.getCurrentNumber.intValue())
           DCtrl.instance.updateBlockHeight(res.getCurrentNumber.intValue())
           (res.getCurrentNumber.intValue(), res.getWantNumber.intValue())
         } else {
           (res.getCurrentNumber.intValue(), res.getWantNumber.intValue())
         }
-
       } else {
+        log.debug("checkMiner --> updateBlockHeight::"+ b.getBlockHeight)
         DCtrl.instance.updateBlockHeight(b.getBlockHeight)
         (b.getBlockHeight, b.getBlockHeight)
       }
