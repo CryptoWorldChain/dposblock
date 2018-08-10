@@ -80,12 +80,22 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
             //check quantifyminers
             val quantifyMinerByCoAddr = Map[String, PDNode]();
             DCtrl.coMinerByUID.filter(p =>
-              if (//p._2.getBcuid.equals(cn.getBcuid) ||// for local ok
-                  (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount + 1) &&
-                (tm.getTermId >= p._2.getTermId || p._2.getTermId == tm.getLastTermId) &&
-                (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
-                  StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))
-                  ) {
+//              if (//p._2.getBcuid.equals(cn.getBcuid) ||// for local ok
+//                  (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount + 1) &&
+//                (tm.getTermId >= p._2.getTermId || p._2.getTermId == tm.getLastTermId) &&
+//                (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
+//                  StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))
+//                  ) {
+              if (StringUtils.equals(p._2.getTermSign, tm.getSign)
+                  ||
+                  (
+                      p._2.getCurBlock >= cn.getCurBlock
+                      &&
+                      (tm.getTermId >= p._2.getTermId || p._2.getTermId == tm.getLastTermId) 
+                      &&
+                                  (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
+                                    StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))
+                  )) {
                 true
               } else {
                 log.debug("unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock

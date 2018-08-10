@@ -119,6 +119,8 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
       .setTermEndBlock(term_Miner.getBlockRange.getEndBlock)
   }
   def syncToDB() {
+    
+    log.debug("checkMiner --> update cur_dnode::" + cur_dnode)
     Daos.dpospropdb.put(
       DPOS_NODE_DB_KEY,
       OValue.newBuilder().setExtdata(cur_dnode.build().toByteString()).build())
@@ -145,6 +147,7 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
         cur_dnode.setLastBlockTime(System.currentTimeMillis())
         //cur_dnode.setCurBlock(blockHeight)
         cur_dnode.setCurBlock(Daos.actdb.getLastBlockNumber.intValue());
+        log.debug("checkMiner --> cur_dnode.setCurBlock::" + cur_dnode.getCurBlock);
         syncToDB()
         //      }
       })
