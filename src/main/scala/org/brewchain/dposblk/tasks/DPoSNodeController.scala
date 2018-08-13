@@ -316,13 +316,18 @@ object DCtrl extends LogHelper {
       minerByBlockHeight(block) match {
         case Some(n) =>
           if (coaddr.equals(n)) {
-            if (realblkMineMS < blkshouldMineMS) {
-              log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockMS=" + tm.getEachBlockMs + ",TermLeft=" + termblockLeft
-                + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign + ",bh=" + block);
-              Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
-            }
-            log.debug("checkMiner --> realblkMineMS::" + realblkMineMS + " blkshouldMineMS::" + blkshouldMineMS + " n::" + n + " coaddr::" + coaddr)
-            (true, false)
+            //if (DCtrl.termMiner().getMinerQueue(101-DCtrl.termMiner().getBlockRange.getStartBlock).getBlockHeight == block + 1) {
+              if (realblkMineMS < blkshouldMineMS) {
+                log.debug("wait for time to Mine:Should=" + blkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockMS=" + tm.getEachBlockMs + ",TermLeft=" + termblockLeft
+                  + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign + ",bh=" + block);
+                Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
+              }
+              log.debug("checkMiner --> realblkMineMS::" + realblkMineMS + " blkshouldMineMS::" + blkshouldMineMS + " n::" + n + " coaddr::" + coaddr)
+              (true, false)
+//            } else {
+//              log.debug("checkMiner --> current height::" + block + " want height::" + DCtrl.termMiner().getMinerQueue(101-DCtrl.termMiner().getBlockRange.getStartBlock).getBlockHeight)
+//              (false, false)
+//            }
           } else {
             if (block > 1 && realblkMineMS > blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) {
               minerByBlockHeight(block + ((realblkMineMS - blkshouldMineMS) / DConfig.MAX_WAIT_BLK_EPOCH_MS).asInstanceOf[Int]) match {

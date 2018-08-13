@@ -86,7 +86,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
 //                (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
 //                  StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))
 //                  ) {
-              if (StringUtils.equals(p._2.getTermSign, tm.getSign)
+              if ( p._2.getTermSign>=tm.getSign
                   ||
                   (
                       p._2.getCurBlock >= cn.getCurBlock

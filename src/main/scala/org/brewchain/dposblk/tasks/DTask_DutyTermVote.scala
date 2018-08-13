@@ -310,7 +310,7 @@ object DTask_DutyTermVote extends LogHelper {
 //            (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
 //              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))))
       
-      if (StringUtils.equals(p._2.getTermSign, tm.getSign)
+      if (p._2.getTermSign >= tm.getSign
 ||
 (
     !StringUtils.equals(omitCoaddr, p._2.getCoAddress) 
