@@ -37,7 +37,7 @@ class DPoSStartup extends PSMDPoSNet[Message] {
 
   @Invalidate
   def destory() {
-
+    DCtrl.instance.isStop = true;
   }
 
 }

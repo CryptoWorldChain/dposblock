@@ -48,6 +48,7 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
   var term_Miner: PSDutyTermVote.Builder = PSDutyTermVote.newBuilder();
   var vote_Request: PSDutyTermVote.Builder = PSDutyTermVote.newBuilder();
 
+  var isStop:Boolean = false;
   def updateVoteReq(pbo: PSDutyTermVote): Unit = {
     vote_Request = pbo.toBuilder()
     //    cur_dnode.setNodeCount(vote_Request.getCoNodes)
@@ -159,7 +160,7 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
     MDCSetBCUID(network);
     MDCRemoveMessageID()
     var continue = true;
-    while (continue) {
+    while (continue && !isStop) {
       try {
         MDCSetMessageID(term_Miner.getSign)
         continue = false;
