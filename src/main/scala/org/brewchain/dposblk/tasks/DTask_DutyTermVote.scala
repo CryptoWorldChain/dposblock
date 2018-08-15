@@ -301,34 +301,31 @@ object DTask_DutyTermVote extends LogHelper {
     val vq = DCtrl.voteRequest()
 
     val quantifyminers = DCtrl.coMinerByUID.filter(p =>
-//- DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount)
-      
-//      if (!StringUtils.equals(omitCoaddr, p._2.getCoAddress) &&
-//        (p._2.getCurBlock >= cn.getCurBlock &&
-//          (tm.getLastTermId == p._2.getTermId
-//            || tm.getTermId >= p._2.getTermId) &&
-//            (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
-//              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))))
-      
-      if (p._2.getTermSign >= tm.getSign
-||
-(
-    !StringUtils.equals(omitCoaddr, p._2.getCoAddress) 
-    &&
-    (
-        p._2.getCurBlock >= cn.getCurBlock 
-        &&
-        (tm.getLastTermId == p._2.getTermId || tm.getTermId >= p._2.getTermId) 
-        &&
+      //- DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount)
+
+      //      if (!StringUtils.equals(omitCoaddr, p._2.getCoAddress) &&
+      //        (p._2.getCurBlock >= cn.getCurBlock &&
+      //          (tm.getLastTermId == p._2.getTermId
+      //            || tm.getTermId >= p._2.getTermId) &&
+      //            (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
+      //              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))))
+
+      if (p._2.getTermId >= tm.getTermId
+        ||
         (
-            StringUtils.isBlank(tm.getSign) 
-            || 
-            StringUtils.equals(p._2.getTermSign, tm.getSign) 
-            ||
-            StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)
-        )
-    )
-)) {
+          !StringUtils.equals(omitCoaddr, p._2.getCoAddress)
+          &&
+          (
+            p._2.getCurBlock >= cn.getCurBlock - tm.getBlockRange.getStartBlock
+            &&
+            (tm.getLastTermId == p._2.getTermId || tm.getTermId >= p._2.getTermId)
+            &&
+            (
+              StringUtils.isBlank(tm.getSign)
+              ||
+              StringUtils.equals(p._2.getTermSign, tm.getSign)
+              ||
+              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))))) {
         true
       } else {
         log.debug("remove unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
