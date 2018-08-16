@@ -87,8 +87,12 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
         //save bc info
         DCtrl.coMinerByUID.get(pbo.getBcuid) match {
           case Some(p) =>
-            log.debug("update term:"+pbo.getCurTermid+",for bcuid="+pbo.getBcuid+",termid="+pbo.getTermId+",sign="+pbo.getSign)
-            DCtrl.coMinerByUID.put(pbo.getBcuid, p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(pbo.getTermId).setTermSign(pbo.getSign).build());
+            if (pbo.getResult == VoteResult.VR_REJECT) {
+              DCtrl.coMinerByUID.put(pbo.getBcuid, p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(pbo.getCurTermid).setTermSign(pbo.getCurTermSign).build());
+            } else {
+              log.debug("update term:" + pbo.getCurTermid + ",for bcuid=" + pbo.getBcuid + ",termid=" + pbo.getTermId + ",sign=" + pbo.getSign)
+              DCtrl.coMinerByUID.put(pbo.getBcuid, p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(pbo.getTermId).setTermSign(pbo.getSign).build());
+            }
           case None =>
         }
         DTask_DutyTermVote.synchronized({

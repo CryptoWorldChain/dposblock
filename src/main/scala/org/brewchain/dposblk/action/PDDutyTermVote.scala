@@ -67,35 +67,38 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
         ret.setVoteAddress(cn.getCoAddress)
 
         DTask_DutyTermVote.synchronized({
-          if ((StringUtils.isBlank(tm.getSign) ||StringUtils.equals(pbo.getBcuid, cn.getBcuid)) ||
-              (StringUtils.isBlank(vq.getSign) || vq.getTermId<=pbo.getTermId||//!!<=
-                  StringUtils.equals(pbo.getBcuid, cn.getBcuid)) &&
-            //            && StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
-            ((tm.getTermId <= pbo.getLastTermId) && tm.getTermId <= pbo.getTermId - 1
-              && (
-                (pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getStartBlock && pbo.getRewriteTerm != null &&
-                  pbo.getRewriteTerm.getBlockLost >= 0) //for revote
-                  || pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock) // for continue vote
-                  || StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) && pbo.getMinerQueueCount > 0) {
+          if ((StringUtils.isBlank(tm.getSign) || StringUtils.equals(pbo.getBcuid, cn.getBcuid)) ||
+            (StringUtils.isBlank(vq.getSign) || vq.getTermId <= pbo.getTermId || //!!<=
+              StringUtils.equals(pbo.getBcuid, cn.getBcuid)) &&
+              //            && StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
+              ((tm.getTermId <= pbo.getLastTermId) && tm.getTermId <= pbo.getTermId - 1
+                && (
+                  (pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getStartBlock && pbo.getRewriteTerm != null &&
+                    pbo.getRewriteTerm.getBlockLost >= 0) //for revote
+                    || pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock) // for continue vote
+                    || StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) && pbo.getMinerQueueCount > 0) {
             //check quantifyminers
             val quantifyMinerByCoAddr = Map[String, PDNode]();
             DCtrl.coMinerByUID.filter(p =>
-//              if (//p._2.getBcuid.equals(cn.getBcuid) ||// for local ok
-//                  (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount + 1) &&
-//                (tm.getTermId >= p._2.getTermId || p._2.getTermId == tm.getLastTermId) &&
-//                (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
-//                  StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))
-//                  ) {
-              if ( p._2.getTermSign>=tm.getSign
-                  ||
+              //              if (//p._2.getBcuid.equals(cn.getBcuid) ||// for local ok
+              //                  (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount + 1) &&
+              //                (tm.getTermId >= p._2.getTermId || p._2.getTermId == tm.getLastTermId) &&
+              //                (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
+              //                  StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))
+              //                  ) {
+              if (p._2.getTermId >= pbo.getTermId
+                ||
                   (
-                      p._2.getCurBlock >= cn.getCurBlock
-                      &&
-                      (tm.getTermId >= p._2.getTermId || p._2.getTermId == tm.getLastTermId) 
-                      &&
-                                  (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
-                                    StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))
-                  )) {
+                    p._2.getCurBlock >= pbo.getBlockRange.getStartBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount + 1)
+                    &&
+                    (pbo.getLastTermId == p._2.getTermId || pbo.getTermId >= p._2.getTermId)
+                    &&
+                    (
+                      StringUtils.isBlank(pbo.getSign)
+                      ||
+                      StringUtils.equals(p._2.getTermSign, pbo.getSign)
+                      ||
+                      StringUtils.equals(p._2.getTermSign, pbo.getLastTermUid)))) {
                 true
               } else {
                 log.debug("unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
@@ -129,7 +132,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                 } else {
                   //check rewrite
                   log.debug("checkMiner --> dutytermvote pbo.getBlockRange.getStartBlock::" + pbo.getBlockRange.getStartBlock);
-                  val (isMiner, isOverrided) = DCtrl.checkMiner(pbo.getBlockRange.getStartBlock, pbo.getCoAddress , System.currentTimeMillis(), Thread.currentThread().getName())
+                  val (isMiner, isOverrided) = DCtrl.checkMiner(pbo.getBlockRange.getStartBlock, pbo.getCoAddress, System.currentTimeMillis(), Thread.currentThread().getName())
                   if (!isOverrided || !isMiner) { //
                     log.debug("Not your Miner Voted!!isMiner=" + isMiner + ",isOverrided=" + isOverrided
                       + ",B=" + cn.getCurBlock + ",BS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock
@@ -159,7 +162,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                 ret.setResult(VoteResult.VR_REJECT)
               } else {
                 if (cn.getCurBlock < pbo.getBlockRange.getStartBlock - 1) {
-                  log.debug("Grant DPos Term Vote but Block Height Not Ready:" + cn.getDutyUid+ ",T=" + tm.getTermId + ",PT=" + pbo.getTermId
+                  log.debug("Grant DPos Term Vote but Block Height Not Ready:" + cn.getDutyUid + ",T=" + tm.getTermId + ",PT=" + pbo.getTermId
                     + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
                     + ",B=" + cn.getCurBlock + ",BS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock
                     + "],VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid
@@ -198,13 +201,13 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
             } else {
               "null";
             }
-              log.debug("Reject DPos Term Vote: TM=" + tm.getSign + ",PT=" + pbo.getTermId
-                + ",VT=" + vq.getTermId + ",PLT=" + pbo.getLastTermId + ",T=" + tm.getTermId
-                + ",PBS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock + "]"
-                + ",TBS=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
-                + ",VBS=[" + vq.getBlockRange.getStartBlock + "," + vq.getBlockRange.getEndBlock + "]"
-                + ",VM=" + vq.getMessageId + ",PLTU=" + pbo.getLastTermUid + ",LTU=" + tm.getLastTermUid
-                + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress + ",ReWrite=" +
+            log.debug("Reject DPos Term Vote: TM=" + tm.getSign + ",PT=" + pbo.getTermId
+              + ",VT=" + vq.getTermId + ",PLT=" + pbo.getLastTermId + ",T=" + tm.getTermId
+              + ",PBS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock + "]"
+              + ",TBS=[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "]"
+              + ",VBS=[" + vq.getBlockRange.getStartBlock + "," + vq.getBlockRange.getEndBlock + "]"
+              + ",VM=" + vq.getMessageId + ",PLTU=" + pbo.getLastTermUid + ",LTU=" + tm.getLastTermUid
+              + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress + ",ReWrite=" +
               nfino);
             ret.setResult(VoteResult.VR_REJECT)
             ret.setTermId(pbo.getTermId)
