@@ -28,6 +28,7 @@ import org.brewchain.evmapi.gens.Tx.MultiTransaction
 
 import scala.collection.JavaConversions._
 import org.apache.commons.lang3.StringUtils
+import java.util.ArrayList
 
 @NActorProvider
 @Instantiate
@@ -44,12 +45,16 @@ object PDPoSTransactionSyncService extends LogHelper with PBUtils with LService[
       handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
     } else {
       try {
+        val dbsaveList = new ArrayList[MultiTransaction.Builder]();
         for (x <- pbo.getTxHexStrList()) {
           var oMultiTransaction = MultiTransaction.newBuilder();
           oMultiTransaction.mergeFrom(Daos.enc.hexDec(x));
           if (!StringUtils.equals(DCtrl.curDN().getBcuid, oMultiTransaction.getTxNode().getBcuid)) {
-            Daos.txHelper.syncTransaction(oMultiTransaction);
+//            Daos.txHelper.syncTransaction(oMultiTransaction);
+            dbsaveList.add(oMultiTransaction)
           }
+          //批量入库
+           Daos.txHelper.syncTransaction(dbsaveList);
         }
         ret.setRetCode(1)
       } catch {
