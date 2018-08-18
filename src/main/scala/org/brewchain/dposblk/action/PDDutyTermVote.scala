@@ -68,7 +68,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
 
         DTask_DutyTermVote.synchronized({
           if ((StringUtils.isBlank(tm.getSign) || StringUtils.equals(pbo.getBcuid, cn.getBcuid)) ||//first init or local vote
-            (StringUtils.isBlank(vq.getSign)) //vq is not zero
+            (StringUtils.isBlank(vq.getSign)||vq.getSign.equals(pbo.getLastTermUid)||vq.getSign.equals(pbo.getSign)) //vq is not zero
               //            && StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
               && ((tm.getTermId <= pbo.getLastTermId) && tm.getTermId <= pbo.getTermId - 1
                 && (
@@ -77,7 +77,8 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                     || pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getEndBlock) // for continue vote
                     || StringUtils.equals(pbo.getCoAddress, cn.getCoAddress)) && pbo.getMinerQueueCount > 0) {
             //check quantifyminers
-            val quantifyMinerByCoAddr = Map[String, PDNode]();
+            val quantifyMinerByCoAddr = Map[String, PDNode]();  
+            var inMinerList = false;
             DCtrl.coMinerByUID.filter(p =>
               //              if (//p._2.getBcuid.equals(cn.getBcuid) ||// for local ok
               //                  (p._2.getCurBlock >= cn.getCurBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount + 1) &&
@@ -85,10 +86,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               //                (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
               //                  StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))
               //                  ) {
-              if (p._2.getTermId >= pbo.getTermId
-                ||
-                  (
-                    p._2.getCurBlock + tm.getMinerQueueCount + DConfig.BLOCK_DISTANCE_COMINE >= pbo.getBlockRange.getStartBlock 
+              if (p._2.getCurBlock + tm.getMinerQueueCount + DConfig.BLOCK_DISTANCE_COMINE >= pbo.getBlockRange.getStartBlock 
                     &&
                     (pbo.getLastTermId >= p._2.getTermId || pbo.getTermId >= p._2.getTermId)
                     &&
@@ -97,7 +95,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                       ||
                       StringUtils.equals(p._2.getTermSign, pbo.getSign)
                       ||
-                      StringUtils.equals(p._2.getTermSign, pbo.getLastTermUid)))) {
+                      StringUtils.equals(p._2.getTermSign, pbo.getLastTermUid))) {
                 true
               } else {
                 log.debug("unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
@@ -109,6 +107,10 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                 quantifyMinerByCoAddr.put(f._2.getCoAddress, f._2);
               })
             val q = pbo.getMinerQueueList.filter { f =>
+              if(f.getMinerCoaddr.equals(cn.getCoAddress)){
+                inMinerList = true;
+              }
+              
               if (!quantifyMinerByCoAddr.contains(f.getMinerCoaddr)) {
                 //                log.debug("UNQuantifyNode:" + f.getMinerCoaddr);
                 true;
@@ -151,7 +153,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               }
 
             if (!reject) {
-              if (pbo.getTermId != tm.getTermId + 1 && q.size > 0) {
+              if (pbo.getTermId != tm.getTermId + 1 && q.size > 0 && inMinerList) {
                 log.debug("Reject DPos TermVote Miner not quntified,cn.duty=" + cn.getDutyUid + ",T=" + tm.getTermId + ",PT=" + pbo.getTermId
                   + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
                   + ",TU=" + tm.getSign + ",LTM=" + tm.getLastTermUid

@@ -323,9 +323,7 @@ object DTask_DutyTermVote extends LogHelper {
       //            (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
       //              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))))
 
-      if (p._2.getTermId >= tm.getTermId
-        ||
-        (
+      if (
           !StringUtils.equals(omitCoaddr, p._2.getCoAddress)
           &&
           (
@@ -338,7 +336,7 @@ object DTask_DutyTermVote extends LogHelper {
               ||
               StringUtils.equals(p._2.getTermSign, tm.getSign)
               ||
-              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))))) {
+              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))) {
         true
       } else {
         log.debug("remove unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
