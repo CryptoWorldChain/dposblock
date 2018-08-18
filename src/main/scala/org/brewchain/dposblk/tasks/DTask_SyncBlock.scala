@@ -17,6 +17,7 @@ import org.brewchain.dposblk.pbgens.Dposblock.PBlockEntry
 import org.brewchain.dposblk.Daos
 import org.fc.brewchain.p22p.action.PMNodeHelper
 import org.brewchain.bcapi.exec.SRunner
+import org.brewchain.dposblk.utils.DConfig
 
 //获取其他节点的term和logidx，commitidx
 case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
@@ -36,18 +37,18 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
       val start = System.currentTimeMillis();
       val n = network.nodeByBcuid(fastNodeID);
       //find random node.
-      val dnodes = DCtrl.coMinerByUID.filter(f => f._2.getCurBlock >= endIdx 
-          && network.directNodeByBcuid.get(f._1).nonEmpty 
-          && network.directNodeByBcuid.get(f._1) != network.noneNode
-          && !f._1.equals(network.root().bcuid))
+      val dnodes = DCtrl.coMinerByUID.filter(f => f._2.getCurBlock >= endIdx
+        && network.directNodeByBcuid.get(f._1).nonEmpty
+        && network.directNodeByBcuid.get(f._1) != network.noneNode
+        && !f._1.equals(network.root().bcuid))
         .map(f => network.directNodeByBcuid.get(f._1).get)
-        
-      val randn = if (dnodes.size == 0) { 
+
+      val randn = if (dnodes.size == 0) {
         log.warn("dnodes size is 0")
-          n 
-        } else dnodes.toList.get((Math.abs(Math.random() * 100000) % dnodes.size).asInstanceOf[Int])
+        n
+      } else dnodes.toList.get((Math.abs(Math.random() * 100000) % dnodes.size).asInstanceOf[Int])
       if (randn == null || randn == network.noneNode) {
-        log.warn("cannot found node from Network:" + network.netid + ",bcuid=" + fastNodeID+",rand="+randn)
+        log.warn("cannot found node from Network:" + network.netid + ",bcuid=" + fastNodeID + ",rand=" + randn)
       } else {
         network.sendMessage("SYNDOB", sync, randn, new CallBack[FramePacket] {
           def onSuccess(fp: FramePacket) = {
@@ -75,12 +76,18 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
                       log.debug("sync block height ok=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
                     } else {
                       log.debug("sync block height failed=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
+                      if (acceptedHeight == DCtrl.curDN().getCurBlock &&
+                        DCtrl.curDN().getCurBlock + 1 == b.getBlockHeight) {
+                        log.debug("try to sync prev-safe blocks:start="+"DCtrl.curDN().getCurBlock"+",count="+DConfig.SYNC_SAFE_BLOCK_COUNT+",from="+fastNodeID)
+                        new DTask_SyncBlock(DCtrl.curDN().getCurBlock - DConfig.SYNC_SAFE_BLOCK_COUNT, DCtrl.curDN().getCurBlock,
+                          network, fastNodeID, new AtomicLong(1)).runOnce();
+                      }
                     }
                     if (acceptedHeight > maxid) {
                       maxid = acceptedHeight;
                     }
                   }
-                  log.debug("checkMiner --> maxid::"+ maxid)
+                  log.debug("checkMiner --> maxid::" + maxid)
                   if (maxid > 0) {
                     DCtrl.instance.updateBlockHeight(maxid)
                   }

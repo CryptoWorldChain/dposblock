@@ -121,7 +121,7 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
   }
   def syncToDB() {
     
-    log.debug("checkMiner --> update cur_dnode::" + cur_dnode)
+//    log.debug("checkMiner --> update cur_dnode::" + cur_dnode)
     Daos.dpospropdb.put(
       DPOS_NODE_DB_KEY,
       OValue.newBuilder().setExtdata(cur_dnode.build().toByteString()).build())
