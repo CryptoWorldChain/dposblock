@@ -347,13 +347,16 @@ object DTask_DutyTermVote extends LogHelper {
             (
               StringUtils.isBlank(tm.getSign)
               ||
-               StringUtils.isBlank(p._2.getTermSign) &&
-              StringUtils.equals(p._2.getTermSign, tm.getSign))))) {
+               StringUtils.isNotBlank(p._2.getTermSign) &&
+              (StringUtils.equals(p._2.getTermSign, tm.getSign)||
+                  StringUtils.equals(p._2.getTermSign, tm.getSign)))))) {
         true
       } else {
         log.debug("remove unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
-          + ",cn=" + cn.getCurBlock + ",TID=" + tm.getTermId + ",LTID=" + tm.getLastTermId + ",PT=" + p._2.getTermId
-          + ",pbtsign=" + p._2.getTermSign + ",tmsign=" + tm.getSign + ",lasttmsig=" + tm.getLastTermUid)
+          + ",cn=" + cn.getCurBlock
+          + ",termstartblk=" + tm.getBlockRange.getStartBlock+"/"+(tm.getBlockRange.getStartBlock - 1 - Math.abs(DConfig.BLOCK_DISTANCE_COMINE))
+          + ",TID=" + tm.getTermId + ",LTID=" + tm.getLastTermId + ",PT=" + p._2.getTermId
+          + ",pbtsign=" + p._2.getTermSign + ",tmsign=" + tm.getSign + ",lasttmsig=" + tm.getLastTermUid+",omitCoaddr="+omitCoaddr)
         false;
       })
     if (quantifyminers.size > 0) {
