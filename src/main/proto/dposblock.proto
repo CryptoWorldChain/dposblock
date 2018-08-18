@@ -177,6 +177,11 @@ message  PDutyTermResult{
 	int64	cur_termid = 7;//当前节点termid
 	string	cur_term_sign = 8;//当前节点的term
 	string 	bcuid = 10;//节点
+	int32	cur_term_start_block = 11;//
+	int32	cur_term_end_block = 12;//
+	int32	vote_term_start_block = 13;//
+	int32	vote_term_end_block = 14;//
+	
 	string 	message_id = 30;
 	string 	sign = 50;//
 }

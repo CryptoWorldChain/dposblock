@@ -88,10 +88,16 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
         DCtrl.coMinerByUID.get(pbo.getBcuid) match {
           case Some(p) =>
             if (pbo.getResult == VoteResult.VR_REJECT) {
-              DCtrl.coMinerByUID.put(pbo.getBcuid, p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(pbo.getCurTermid).setTermSign(pbo.getCurTermSign).build());
+              DCtrl.coMinerByUID.put(pbo.getBcuid, p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(pbo.getCurTermid).setTermSign(pbo.getCurTermSign)
+                .setTermEndBlock(pbo.getCurTermEndBlock)
+                .setTermStartBlock(pbo.getCurTermStartBlock)
+                .build());
             } else {
               log.debug("update term:" + pbo.getCurTermid + ",for bcuid=" + pbo.getBcuid + ",termid=" + pbo.getTermId + ",sign=" + pbo.getSign)
-              DCtrl.coMinerByUID.put(pbo.getBcuid, p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(pbo.getTermId).setTermSign(pbo.getSign).build());
+              DCtrl.coMinerByUID.put(pbo.getBcuid, p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(pbo.getTermId).setTermSign(pbo.getSign)
+                .setTermEndBlock(pbo.getVoteTermEndBlock)
+                .setTermStartBlock(pbo.getVoteTermStartBlock)
+                .build());
             }
           case None =>
         }

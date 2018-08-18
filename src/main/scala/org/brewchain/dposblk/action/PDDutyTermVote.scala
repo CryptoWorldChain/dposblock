@@ -58,7 +58,9 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
         ret.setBcuid(cn.getBcuid)
         ret.setRetCode(0).setRetMessage("SUCCESS")
         ret.setCurTermid(tm.getTermId).setCurBlock(cn.getCurBlock).setCurTermSign(tm.getSign)
-
+        ret.setCurTermStartBlock(tm.getBlockRange.getStartBlock).setCurTermEndBlock(tm.getBlockRange.getEndBlock)
+        ret.setVoteTermStartBlock(pbo.getBlockRange.getStartBlock).setVoteTermEndBlock(pbo.getBlockRange.getEndBlock)
+        
         val vq = DCtrl.voteRequest();
         //
         ret.setTermId(pbo.getTermId)

@@ -238,8 +238,11 @@ object DTask_DutyTermVote extends LogHelper {
       } else if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         || JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) > DConfig.DTV_TIMEOUT_SEC)
         && System.currentTimeMillis() > ban_for_vote_sec &&
-        (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock)
-        && vq.getTermId <= tm.getTermId + 1) {
+        ( (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock) ||
+            JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) > DConfig.DTV_TIMEOUT_SEC)&&
+            (cn.getCurBlock + 1  >= tm.getBlockRange.getStartBlock)
+        && vq.getTermId <= tm.getTermId + 1 )
+      {
         //        cn.setCominerStartBlock(1)
         val msgid = UUIDGenerator.generate();
         MDCSetMessageID(msgid);
@@ -251,7 +254,8 @@ object DTask_DutyTermVote extends LogHelper {
         } else {
           log.debug("can vote:timepost=" + JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) + ",DTVTIMOUT=" + DConfig.DTV_TIMEOUT_SEC + ",past.ensd=" +
             JodaTimeHelper.secondIntFromNow(tm.getTermEndMs));
-          true
+          //log
+          JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) > DConfig.DTV_TIMEOUT_SEC
         }
         var maxtermid = tm.getTermId;
         Votes.vote(DCtrl.coMinerByUID.map(p => p._2).toList).PBFTVote({ p => Some(p.getTermSign, p.getTermId, p.getTermStartBlock, p.getTermEndBlock) }, DCtrl.coMinerByUID.size) match {
@@ -267,7 +271,7 @@ object DTask_DutyTermVote extends LogHelper {
             maxtermid = termid;
           case _ => //cannot converge, find the max size.
             DCtrl.coMinerByUID.map(p => {
-              if (p._2.getTermId > tm.getTermId && p._2.getCurBlock > cn.getCurBlock) {
+              if (p._2.getTermId > tm.getTermId && p._2.getTermEndBlock >= cn.getCurBlock) {
                 log.debug("cannot vote:termid=" + p._2.getTermId + "->" + p._2.getBcuid + ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
                 canvote = false;
                 if (p._2.getTermId > maxtermid) {
