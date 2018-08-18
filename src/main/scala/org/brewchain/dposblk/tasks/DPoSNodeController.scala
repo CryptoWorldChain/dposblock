@@ -449,7 +449,7 @@ object DCtrl extends LogHelper {
             def onFailed(e: java.lang.Exception, fp: FramePacket) {
               log.debug("sync transaction error::" + e.getMessage, e)
             }
-          })
+          },'8')
           //} 
           //})
         }

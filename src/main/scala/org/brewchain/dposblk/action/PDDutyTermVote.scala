@@ -224,7 +224,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
           DTask_DutyTermVote.notifyAll()
         })
 
-        net.dwallMessage("DTRDOB", Left(ret.build()), pbo.getMessageId);
+        net.dwallMessage("DTRDOB", Left(ret.build()), pbo.getMessageId,'9');
         //        }
 
       } catch {

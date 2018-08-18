@@ -421,7 +421,7 @@ object DTask_DutyTermVote extends LogHelper {
         + ",tm_end_past=" + JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) + ",lastsig=" + tm.getSign
         + ",sec,vN=" + DCtrl.coMinerByUID.size + ",cN=" + conodescount + ",sign=" + newterm.getSign + ",mineQ=" + newterm.getMinerQueueList.foldLeft("")((a, b) => a + "\n\t" + b.getBlockHeight + "=" + b.getMinerCoaddr))
       DCtrl.instance.vote_Request = newterm;
-      network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), msgid);
+      network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), msgid,'9');
       true
     } else {
       log.debug("No more quaitify node can vote:");
@@ -451,7 +451,7 @@ object DTask_DutyTermVote extends LogHelper {
     ret.setBcuid(cn.getBcuid)
     ret.setSign(tm.getSign)
     ret.setVoteAddress(cn.getCoAddress)
-    network.wallOutsideMessage("DTRDOB", Left(ret.build()), tm.getMessageId, 9);
+    network.wallOutsideMessage("DTRDOB", Left(ret.build()), tm.getMessageId, '9');
   }
 
 }
