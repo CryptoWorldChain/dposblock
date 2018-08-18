@@ -148,7 +148,7 @@ object DTask_DutyTermVote extends LogHelper {
                     DCtrl.instance.term_Miner = dbtempvote
                     DCtrl.instance.updateTerm()
                     hasConverge = true;
-
+                    clearRecords(votelist);
                     true
                   } else if (n == VoteResult.VR_REJECT) {
                     clearRecords(votelist);
@@ -204,6 +204,7 @@ object DTask_DutyTermVote extends LogHelper {
         DCtrl.curDN().clearDutyUid();
         sleepToNextVote();
       } else if (hasConverge) {
+
         wallOutTermGrantResult(network);
       }
       hasConverge
@@ -237,7 +238,7 @@ object DTask_DutyTermVote extends LogHelper {
       } else if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         || JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) > DConfig.DTV_TIMEOUT_SEC)
         && System.currentTimeMillis() > ban_for_vote_sec &&
-        (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getStartBlock)
+        (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock)
         && vq.getTermId <= tm.getTermId + 1) {
         //        cn.setCominerStartBlock(1)
         val msgid = UUIDGenerator.generate();
@@ -252,18 +253,30 @@ object DTask_DutyTermVote extends LogHelper {
             JodaTimeHelper.secondIntFromNow(tm.getTermEndMs));
           true
         }
-        var maxtmid = tm.getTermId;
-        DCtrl.coMinerByUID.map(p => {
-          if (p._2.getTermId > tm.getTermId && p._2.getCurBlock > cn.getCurBlock) {
-            if (p._2.getTermId > tm.getTermId + DConfig.VOTE_MAX_TERM_DISTANCE) {
-              log.debug("cannot vote:termid=" + p._2.getTermId + "->" + p._2.getBcuid + ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
+        var maxtermid = tm.getTermId;
+        Votes.vote(DCtrl.coMinerByUID.map(p => p._2).toList).PBFTVote({ p => Some(p.getTermSign, p.getTermId, p.getTermStartBlock, p.getTermEndBlock) }, DCtrl.coMinerByUID.size) match {
+          case Converge((sign: String, termid: Int, startBlk: Int, endBlk: Int)) => //get termid
+            if ((StringUtils.isBlank(sign) && termid <= 2 ||
+              sign.equals(tm.getSign) && termid == tm.getTermId) &&
+              cn.getCurBlock >= startBlk &&
+              cn.getCurBlock <= endBlk) {
+              canvote = true;
+            } else {
               canvote = false;
             }
-            if (p._2.getTermId > maxtmid) {
-              maxtmid = p._2.getTermId;
-            }
-          }
-        })
+            maxtermid = termid;
+          case _ => //cannot converge, find the max size.
+            DCtrl.coMinerByUID.map(p => {
+              if (p._2.getTermId > tm.getTermId && p._2.getCurBlock > cn.getCurBlock) {
+                log.debug("cannot vote:termid=" + p._2.getTermId + "->" + p._2.getBcuid + ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
+                canvote = false;
+                if (p._2.getTermId > maxtermid) {
+                  maxtermid = p._2.getTermId;
+                }
+              }
+            })
+        }
+
         if (tm.getMinerQueueCount > 0 && cn.getCurBlock > 0 && tm.getMinerQueueList.filter { m => m.getMinerCoaddr.equals(cn.getCoAddress) }.size == 0) {
           log.debug("cannot vote:term miner queue not include current:" + cn.getCoAddress);
           canvote = false;
@@ -278,7 +291,7 @@ object DTask_DutyTermVote extends LogHelper {
         } else {
           log.debug("cannot vote Sec=" + JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) + ",DV=" + DConfig.DTV_TIMEOUT_SEC
             + ",co=" + tm.getCoNodes);
-          checkVoteDB(vq, maxtmid)
+          checkVoteDB(vq, maxtermid)
         }
       } else {
         log.debug("cannot do vote ");
@@ -316,7 +329,7 @@ object DTask_DutyTermVote extends LogHelper {
           !StringUtils.equals(omitCoaddr, p._2.getCoAddress)
           &&
           (
-            p._2.getCurBlock >= cn.getCurBlock - tm.getBlockRange.getStartBlock
+            p._2.getCurBlock >= tm.getBlockRange.getStartBlock
             &&
             (tm.getLastTermId == p._2.getTermId || tm.getTermId >= p._2.getTermId)
             &&
@@ -413,7 +426,7 @@ object DTask_DutyTermVote extends LogHelper {
     ret.setRetCode(0).setRetMessage("SUCCESS")
     ret.setCurTermid(tm.getTermId).setCurBlock(cn.getCurBlock).setCurTermSign(tm.getSign)
 
-    val vq = DCtrl.voteRequest();
+    //    val vq = DCtrl.voteRequest();
     //
     ret.setTermId(tm.getTermId)
     ret.setSign(tm.getSign)

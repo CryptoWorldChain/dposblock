@@ -35,7 +35,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
       val msgid = UUIDGenerator.generate();
       val cn = DCtrl.instance.cur_dnode;
       val curtime = System.currentTimeMillis();
-      log.debug("checkMiner --> call cn::" + cn);
+//      log.debug("checkMiner --> call cn::" + cn);
 //      val (isMyBlock, isOverride) = DCtrl.checkMiner(cn.getCurBlock + 1, cn.getCoAddress, curtime,
 //        Thread.currentThread().getName ,DConfig.BLK_EPOCH_MS);
       

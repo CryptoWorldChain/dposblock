@@ -75,7 +75,8 @@ class DPoSBGLoader() extends Runnable with LogHelper {
 
     UUIDGenerator.setJVM(dposnet.root().bcuid.substring(1))
     dposnet.changeNodeVAddr(naccount);
-    log.debug("dposnet.initOK:My Node=" + dposnet.root() + ",CoAddr=" + dposnet.root().v_address) // my node
+    log.debug("dposnet.initOK:My Node=" + dposnet.root() + ",CoAddr=" + dposnet.root().v_address
+        +",dctrl.tick="+Math.min(DConfig.TICK_DCTRL_MS, DConfig.BLK_EPOCH_MS)) // my node
 
     DCtrl.instance = DPosNodeController(dposnet);
 

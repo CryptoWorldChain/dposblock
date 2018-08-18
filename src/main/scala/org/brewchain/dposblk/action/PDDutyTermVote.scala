@@ -67,11 +67,10 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
         ret.setVoteAddress(cn.getCoAddress)
 
         DTask_DutyTermVote.synchronized({
-          if ((StringUtils.isBlank(tm.getSign) || StringUtils.equals(pbo.getBcuid, cn.getBcuid)) ||
-            (StringUtils.isBlank(vq.getSign) || vq.getTermId <= pbo.getTermId || //!!<=
-              StringUtils.equals(pbo.getBcuid, cn.getBcuid)) &&
+          if ((StringUtils.isBlank(tm.getSign) || StringUtils.equals(pbo.getBcuid, cn.getBcuid)) ||//first init or local vote
+            (StringUtils.isBlank(vq.getSign)) //vq is not zero
               //            && StringUtils.isBlank(vq.getMessageId) || vq.getMessageId.equals(pbo.getLastTermUid))
-              ((tm.getTermId <= pbo.getLastTermId) && tm.getTermId <= pbo.getTermId - 1
+              && ((tm.getTermId <= pbo.getLastTermId) && tm.getTermId <= pbo.getTermId - 1
                 && (
                   (pbo.getBlockRange.getStartBlock >= tm.getBlockRange.getStartBlock && pbo.getRewriteTerm != null &&
                     pbo.getRewriteTerm.getBlockLost >= 0) //for revote
@@ -89,12 +88,12 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               if (p._2.getTermId >= pbo.getTermId
                 ||
                   (
-                    p._2.getCurBlock >= pbo.getBlockRange.getStartBlock - DConfig.DTV_MUL_BLOCKS_EACH_TERM * (tm.getMinerQueueCount + 1)
+                    p._2.getCurBlock + tm.getMinerQueueCount + DConfig.BLOCK_DISTANCE_COMINE >= pbo.getBlockRange.getStartBlock 
                     &&
-                    (pbo.getLastTermId == p._2.getTermId || pbo.getTermId >= p._2.getTermId)
+                    (pbo.getLastTermId >= p._2.getTermId || pbo.getTermId >= p._2.getTermId)
                     &&
                     (
-                      StringUtils.isBlank(pbo.getSign)
+                      StringUtils.isBlank(pbo.getLastTermUid) && StringUtils.isBlank(p._2.getLastTermSign)
                       ||
                       StringUtils.equals(p._2.getTermSign, pbo.getSign)
                       ||
@@ -102,8 +101,8 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                 true
               } else {
                 log.debug("unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
-                  + ",cn=" + cn.getCurBlock + ",PID=" + p._2.getTermId + ",TID=" + tm.getTermId + ",LTID=" + tm.getLastTermId
-                  + ",pbtsign=" + p._2.getTermSign + ",tmsign=" + tm.getSign + ",lasttmsig=" + tm.getLastTermUid)
+                  + ",cn=" + cn.getCurBlock + ",PID=" + p._2.getTermId + ",pbo.TID=" + pbo.getTermId + ",LPBO.TID=" + pbo.getLastTermId
+                  + ",pbtsign=" + p._2.getTermSign + ",pbo.sign=" + pbo.getSign + ",pbo.lasttmsig=" + pbo.getLastTermUid)
                 false;
               }).map(f =>
               {
@@ -119,7 +118,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
             }
             val reject =
               if (pbo.getBlockRange.getStartBlock != tm.getBlockRange.getEndBlock + 1 && tm.getTermId > 0
-                && System.currentTimeMillis() - tm.getTermEndMs < DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000) {
+                && System.currentTimeMillis() - cn.getLastBlockTime > DConfig.MAX_WAIT_BLK_EPOCH_MS) {//跟上一块确实是超时了才能重新投票
                 if (pbo.getRewriteTerm == null) {
                   log.debug("Reject DPos TermVote block not a sequence,cn.duty=" + cn.getDutyUid + ",T=" + tm.getTermId + ",PT=" + pbo.getTermId
                     + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
