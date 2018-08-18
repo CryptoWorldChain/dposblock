@@ -250,7 +250,14 @@ object DTask_DutyTermVote extends LogHelper {
         var canvote = if (JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) < DConfig.DTV_TIMEOUT_SEC &&
           StringUtils.isNotBlank(tm.getSign) && tm.getCoNodes > 1) {
           val idx = (Math.abs(tm.getSign.hashCode()) % tm.getMinerQueueCount)
-          tm.getMinerQueue(idx).getMinerCoaddr.equals(cn.getCoAddress)
+          val coMiner = tm.getMinerQueue(idx).getMinerCoaddr;
+          if(coMiner.equals(cn.getCoAddress)){
+            true;
+          }else{
+            log.debug("can not vote: current cominer not in last term:" + coMiner  + ",curr=" + cn.getCoAddress + ",tmsign=" +
+              tm.getSign+",queuecount="+tm.getMinerQueueCount+",idx="+idx);
+            false;
+          }
         } else {
           log.debug("can vote:timepost=" + JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) + ",DTVTIMOUT=" + DConfig.DTV_TIMEOUT_SEC + ",past.ensd=" +
             JodaTimeHelper.secondIntFromNow(tm.getTermEndMs));
@@ -260,13 +267,15 @@ object DTask_DutyTermVote extends LogHelper {
         var maxtermid = tm.getTermId;
         Votes.vote(DCtrl.coMinerByUID.map(p => p._2).toList).PBFTVote({ p => Some(p.getTermSign, p.getTermId, p.getTermStartBlock, p.getTermEndBlock) }, DCtrl.coMinerByUID.size) match {
           case Converge((sign: String, termid: Int, startBlk: Int, endBlk: Int)) => //get termid
-            if ((StringUtils.isBlank(sign) && termid <= 2 ||
+            if ((StringUtils.isBlank(sign)  || startBlk <= 0 || endBlk <= 0 ||
               sign.equals(tm.getSign) && termid == tm.getTermId) &&
               cn.getCurBlock >= startBlk &&
               cn.getCurBlock <= endBlk) {
               canvote = true;
             } else {
               canvote = false;
+              log.debug("can not vote: pbft converge but not equals to local :sign=" +sign  + ",termid=" + termid + ",startBlk=" +
+                startBlk+",endBlk="+endBlk+",curtermid="+tm.getTermId+",curblock="+cn.getCurBlock);
             }
             maxtermid = termid;
           case _ => //cannot converge, find the max size.
@@ -338,9 +347,8 @@ object DTask_DutyTermVote extends LogHelper {
             (
               StringUtils.isBlank(tm.getSign)
               ||
-              StringUtils.equals(p._2.getTermSign, tm.getSign)
-              ||
-              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))))) {
+               StringUtils.isBlank(p._2.getTermSign) &&
+              StringUtils.equals(p._2.getTermSign, tm.getSign))))) {
         true
       } else {
         log.debug("remove unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
