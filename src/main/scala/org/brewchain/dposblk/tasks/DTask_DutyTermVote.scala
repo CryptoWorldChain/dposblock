@@ -323,11 +323,11 @@ object DTask_DutyTermVote extends LogHelper {
       //            (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
       //              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))))
 
-      if (
-          !StringUtils.equals(omitCoaddr, p._2.getCoAddress)
+      if ( p._2.getCoAddress.equals(cn.getCoAddress)
+          ||( !StringUtils.equals(omitCoaddr, p._2.getCoAddress)
           &&
           (
-            p._2.getCurBlock >= tm.getBlockRange.getStartBlock
+            p._2.getCurBlock >= tm.getBlockRange.getStartBlock - 1 - Math.abs(DConfig.BLOCK_DISTANCE_COMINE) 
             &&
             (tm.getLastTermId == p._2.getTermId || tm.getTermId >= p._2.getTermId)
             &&
@@ -336,7 +336,7 @@ object DTask_DutyTermVote extends LogHelper {
               ||
               StringUtils.equals(p._2.getTermSign, tm.getSign)
               ||
-              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))) {
+              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))))) {
         true
       } else {
         log.debug("remove unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
