@@ -94,10 +94,17 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
                 .build());
             } else {
               log.debug("update term:" + pbo.getCurTermid + ",for bcuid=" + pbo.getBcuid + ",termid=" + pbo.getTermId + ",sign=" + pbo.getSign)
-              DCtrl.coMinerByUID.put(pbo.getBcuid, p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(pbo.getTermId).setTermSign(pbo.getSign)
+              val (n_termid, n_termsig) =
+                if (pbo.getCurBlock < pbo.getVoteTermStartBlock - 10 && pbo.getCurTermid < pbo.getTermId - 2) {
+                  (pbo.getCurTermid, pbo.getCurTermSign)
+                } else {
+                  (pbo.getTermId, pbo.getSign)
+                }
+              DCtrl.coMinerByUID.put(pbo.getBcuid, p.toBuilder().setCurBlock(pbo.getCurBlock).setTermId(n_termid).setTermSign(n_termsig)
                 .setTermEndBlock(pbo.getVoteTermEndBlock)
                 .setTermStartBlock(pbo.getVoteTermStartBlock)
                 .build());
+
             }
           case None =>
         }

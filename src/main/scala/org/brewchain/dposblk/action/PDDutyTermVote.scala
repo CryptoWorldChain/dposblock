@@ -60,7 +60,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
         ret.setCurTermid(tm.getTermId).setCurBlock(cn.getCurBlock).setCurTermSign(tm.getSign)
         ret.setCurTermStartBlock(tm.getBlockRange.getStartBlock).setCurTermEndBlock(tm.getBlockRange.getEndBlock)
         ret.setVoteTermStartBlock(pbo.getBlockRange.getStartBlock).setVoteTermEndBlock(pbo.getBlockRange.getEndBlock)
-        
+
         val vq = DCtrl.voteRequest();
         //
         ret.setTermId(pbo.getTermId)
@@ -89,7 +89,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               //                  StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))
               //                  ) {
               if (p._2.getCoAddress.equals(pbo.getCoAddress)
-                || ( p._2.getCurBlock >= tm.getBlockRange.getStartBlock - 1 - Math.abs(DConfig.BLOCK_DISTANCE_COMINE) 
+                || (p._2.getCurBlock >= tm.getBlockRange.getStartBlock - 1 - Math.abs(DConfig.BLOCK_DISTANCE_COMINE)
                   &&
                   (pbo.getLastTermId >= p._2.getTermId || pbo.getTermId >= p._2.getTermId)
                   &&
@@ -165,7 +165,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                   + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress + ",qsize=" + q.size);
                 ret.setResult(VoteResult.VR_REJECT)
               } else {
-                if (cn.getCurBlock < pbo.getBlockRange.getStartBlock - 1) {
+                if (cn.getCurBlock < pbo.getBlockRange.getStartBlock - 10 && tm.getTermId < pbo.getLastTermId) {
                   log.debug("Grant DPos Term Vote but Block Height Not Ready:" + cn.getDutyUid + ",T=" + tm.getTermId + ",PT=" + pbo.getTermId
                     + ",VT=" + vq.getTermId + ",LT=" + pbo.getLastTermId
                     + ",B=" + cn.getCurBlock + ",BS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock
@@ -173,7 +173,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                     + ",PU=" + pbo.getSign + ",PTM=" + pbo.getLastTermUid
                     + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress + ",from=" + pbo.getBcuid);
                   ret.setResult(VoteResult.VR_GRANTED)
-                  ret.setTermId(tm.getTermId)
+                  ret.setTermId(pbo.getTermId)
                   ret.setBcuid(cn.getBcuid)
                   ret.setSign(pbo.getSign)
                   ret.setVoteAddress(cn.getCoAddress)
@@ -224,7 +224,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
           DTask_DutyTermVote.notifyAll()
         })
 
-        net.dwallMessage("DTRDOB", Left(ret.build()), pbo.getMessageId,'9');
+        net.dwallMessage("DTRDOB", Left(ret.build()), pbo.getMessageId, '9');
         //        }
 
       } catch {
