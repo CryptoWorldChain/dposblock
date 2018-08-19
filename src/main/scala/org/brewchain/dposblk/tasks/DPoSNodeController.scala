@@ -310,8 +310,8 @@ object DCtrl extends LogHelper {
       }
       (false, false)
     } else {
-      val lastBlkTime = if (block == 1) 0 else 
-        Math.max(Daos.blkHelper.GetBestBlock().getHeader.getTimestamp,termMiner().getTermStartMs);
+      val lastBlkTime = if (block == 1)  termMiner().getTermStartMs else
+        Math.max(Daos.blkHelper.GetBestBlock().getHeader.getTimestamp, termMiner().getTermStartMs);
       val blkshouldMineMS = tm.getEachBlockMs + lastBlkTime
       val realblkMineMS = mineTime;
       val termblockLeft = block - tm.getEndBlock
@@ -331,7 +331,7 @@ object DCtrl extends LogHelper {
             //              (false, false)
             //            }
           } else {
-            if (block > 1 && realblkMineMS > blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) {
+            if (block >= 1 && realblkMineMS > blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) {
               minerByBlockHeight(block + ((realblkMineMS - blkshouldMineMS) / DConfig.MAX_WAIT_BLK_EPOCH_MS).asInstanceOf[Int]) match {
                 case Some(nn) =>
                   log.debug("Override miner for Next:check:" + blkshouldMineMS + ",realblkmine=" + realblkMineMS + ",n=" + n
@@ -344,8 +344,8 @@ object DCtrl extends LogHelper {
                   (false, true)
               }
             } else {
-              //              log.debug("wait for timeout to Mine:ShouldT=" + (blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) + ",realblkmine=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockSec
-              //                + ",TermLeft=" + termblockLeft);
+              log.debug("wait for timeout to Mine:ShouldT=" + (blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) + ",realblkmine=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockMs
+                + ",TermLeft=" + termblockLeft);
               if (realblkMineMS < blkshouldMineMS) {
                 Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
               } else {
