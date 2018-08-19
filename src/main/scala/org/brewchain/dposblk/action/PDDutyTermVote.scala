@@ -173,7 +173,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                     + ",PU=" + pbo.getSign + ",PTM=" + pbo.getLastTermUid
                     + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress + ",from=" + pbo.getBcuid);
                   ret.setResult(VoteResult.VR_GRANTED)
-                  ret.setTermId(pbo.getTermId)
+                  ret.setTermId(tm.getTermId)
                   ret.setBcuid(cn.getBcuid)
                   ret.setSign(pbo.getSign)
                   ret.setVoteAddress(cn.getCoAddress)
