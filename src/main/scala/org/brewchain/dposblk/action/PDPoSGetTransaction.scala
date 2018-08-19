@@ -46,7 +46,12 @@ object PDPoSGetTransactionService extends LogHelper with PBUtils with LService[P
       try{
          for (txHash <- pbo.getTxHashList) {
            val tx = Daos.txHelper.GetTransaction(txHash)
-           ret.addTxContent(ByteString.copyFrom(tx.toByteArray()));
+           if(tx!=null)
+           {
+             ret.addTxContent(ByteString.copyFrom(tx.toByteArray()));
+           }else{
+             log.debug("cannot get tx by hash:"+txHash);
+           }
          }
         ret.setRetCode(1)
       }
