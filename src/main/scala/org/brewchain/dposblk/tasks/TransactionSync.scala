@@ -32,14 +32,22 @@ object TxSync extends LogHelper {
 
   def trySyncTx(network: Network): Unit = {
 
-    //      log.debug("start broadcast transaction")
     val res = Daos.txHelper.getWaitSendTxToSend(DConfig.MAX_TNX_EACH_BROADCAST)
     if (res.getTxHashCount > 0) {
       val msgid = UUIDGenerator.generate();
       val syncTransaction = PSSyncTransaction.newBuilder();
       syncTransaction.setMessageid(msgid);
-      syncTransaction.addAllTxHash(res.getTxHashList);
-      syncTransaction.addAllTxDatas(res.getTxDatasList);
+
+      for (x <- res.getTxHashList) {
+        syncTransaction.addTxHash(x)
+      }
+
+      for (x <- res.getTxDatasList) {
+        syncTransaction.addTxDatas(x)
+      }
+
+      //      syncTransaction.addAllTxHash(res.getTxHashList);
+      //      syncTransaction.addAllTxDatas(res.getTxDatasList);
       network.dwallMessage("BRTDOB", Left(syncTransaction.build()), msgid)
     } else {
       //        log.debug("not found transaction for broadcast:" + res.getTxHexStrCount())
