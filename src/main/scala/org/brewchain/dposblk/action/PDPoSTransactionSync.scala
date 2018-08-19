@@ -46,9 +46,9 @@ object PDPoSTransactionSyncService extends LogHelper with PBUtils with LService[
     } else {
       try {
         val dbsaveList = new ArrayList[MultiTransaction.Builder]();
-        for (x <- pbo.getTxHexStrList()) {
+        for (x <- pbo.getTxDatasList) {
           var oMultiTransaction = MultiTransaction.newBuilder();
-          oMultiTransaction.mergeFrom(Daos.enc.hexDec(x));
+          oMultiTransaction.mergeFrom(x);
           if (!StringUtils.equals(DCtrl.curDN().getBcuid, oMultiTransaction.getTxNode().getBcuid)) {
 //            Daos.txHelper.syncTransaction(oMultiTransaction);
             dbsaveList.add(oMultiTransaction)

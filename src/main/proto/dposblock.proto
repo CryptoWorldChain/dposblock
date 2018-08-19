@@ -214,7 +214,11 @@ message PRetSyncBlocks{
 }
 
 message PSSyncTransaction {
-	repeated string txHexStr = 1;
+	//repeated string txHexStr = 1;
+	repeated bytes txHash = 1;
+	repeated bytes txDatas = 2;
+	string messageid = 3;
+	
 }
 
 message PRetSyncTransaction {

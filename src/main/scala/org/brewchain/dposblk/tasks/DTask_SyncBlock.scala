@@ -78,8 +78,8 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
                       log.debug("sync block height failed=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
                       if (acceptedHeight == DCtrl.curDN().getCurBlock &&
                         DCtrl.curDN().getCurBlock + 1 == b.getBlockHeight) {
-                        log.debug("try to sync prev-safe blocks:start="+"DCtrl.curDN().getCurBlock"+",count="+DConfig.SYNC_SAFE_BLOCK_COUNT+",from="+fastNodeID)
-                        new DTask_SyncBlock(DCtrl.curDN().getCurBlock - DConfig.SYNC_SAFE_BLOCK_COUNT, DCtrl.curDN().getCurBlock,
+                        log.debug("try to sync prev-safe blocks:start=" + DCtrl.curDN().getCurBlock + ",count=" + DConfig.SYNC_SAFE_BLOCK_COUNT + ",from=" + fastNodeID)
+                        new DTask_SyncBlock(DCtrl.curDN().getCurBlock - DConfig.SYNC_SAFE_BLOCK_COUNT, DCtrl.curDN().getCurBlock + 1 + DConfig.SYNC_SAFE_BLOCK_COUNT / 2,
                           network, fastNodeID, new AtomicLong(1)).runOnce();
                       }
                     }

@@ -22,28 +22,27 @@ import org.fc.brewchain.p22p.action.PMNodeHelper
 case class TransactionSync(network: Network) extends SRunner with PMNodeHelper with LogHelper {
   def getName() = "TxSync"
   def runOnce() = {
-      Thread.currentThread().setName("TxSync");
-      TxSync.trySyncTx(network);
-    }
+    Thread.currentThread().setName("TxSync");
+    TxSync.trySyncTx(network);
+  }
 }
-object TxSync extends LogHelper  {
-    var instance: TransactionSync = TransactionSync(null);
-    def dposNet(): Network = instance.network;
-    
-    def trySyncTx(network: Network): Unit = {
-      
-//      log.debug("start broadcast transaction")
-      val res = Daos.txHelper.getWaitSendTxToSend(DConfig.MAX_TNX_EACH_BROADCAST)
-      if(res.getTxHexStrCount()>0) {
-        val msgid = UUIDGenerator.generate();
-        val syncTransaction = PSSyncTransaction.newBuilder();
-        
-        for(x <- res.getTxHexStrList()){
-           syncTransaction.addTxHexStr(x);
-        }
-        network.dwallMessage("BRTDOB", Left(syncTransaction.build()), msgid)
-      } else {
-//        log.debug("not found transaction for broadcast:" + res.getTxHexStrCount())
-      }
+object TxSync extends LogHelper {
+  var instance: TransactionSync = TransactionSync(null);
+  def dposNet(): Network = instance.network;
+
+  def trySyncTx(network: Network): Unit = {
+
+    //      log.debug("start broadcast transaction")
+    val res = Daos.txHelper.getWaitSendTxToSend(DConfig.MAX_TNX_EACH_BROADCAST)
+    if (res.getTxHashCount > 0) {
+      val msgid = UUIDGenerator.generate();
+      val syncTransaction = PSSyncTransaction.newBuilder();
+      syncTransaction.setMessageid(msgid);
+      syncTransaction.addAllTxHash(res.getTxHashList);
+      syncTransaction.addAllTxDatas(res.getTxDatasList);
+      network.dwallMessage("BRTDOB", Left(syncTransaction.build()), msgid)
+    } else {
+      //        log.debug("not found transaction for broadcast:" + res.getTxHexStrCount())
     }
+  }
 }
