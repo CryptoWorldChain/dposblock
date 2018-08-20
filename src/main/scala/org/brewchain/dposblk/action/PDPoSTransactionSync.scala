@@ -51,6 +51,7 @@ object PDPoSTransactionSyncService extends LogHelper with PBUtils with LService[
       try {
         MDCSetBCUID(DCtrl.dposNet())
         MDCSetMessageID(pbo.getMessageid)
+        log.debug("OnSyncTx:" + pbo.getSyncType + ",count=" + pbo.getTxHashCount + ",from=" + pbo.getFromBcuid + ",confirm=" + pbo.getConfirmBcuid);
 
         var bits = new BigInteger("" + DCtrl.instance.network.root().node_idx);
         val confirmNode =
@@ -85,7 +86,9 @@ object PDPoSTransactionSyncService extends LogHelper with PBUtils with LService[
               syncTransaction.setSyncType(SyncType.ST_CONFIRM_RECV);
               syncTransaction.setFromBcuid(pbo.getFromBcuid);
               syncTransaction.setConfirmBcuid(DCtrl.instance.network.root().bcuid)
-              syncTransaction.addAllTxHash(pbo.getTxHashList);
+              pbo.getTxHashList.map {
+                f => syncTransaction.addTxHash(f)
+              }
               //      syncTransaction.addAllTxHash(res.getTxHashList);
               //      syncTransaction.addAllTxDatas(res.getTxDatasList);
               DCtrl.instance.network.wallMessage("BRTDOB", Left(syncTransaction.build()), msgid)
@@ -96,7 +99,7 @@ object PDPoSTransactionSyncService extends LogHelper with PBUtils with LService[
               }
           }
         } else {
-          log.debug("cannot find bcuid from network:" + pbo.getConfirmBcuid + "," + pbo.getFromBcuid + ",synctype="+pbo.getSyncType);
+          log.debug("cannot find bcuid from network:" + pbo.getConfirmBcuid + "," + pbo.getFromBcuid + ",synctype=" + pbo.getSyncType);
         }
 
         ret.setRetCode(1)
