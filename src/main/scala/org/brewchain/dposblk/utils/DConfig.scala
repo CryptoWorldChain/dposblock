@@ -10,7 +10,7 @@ object DConfig {
   val _DBLK_EPOCH_SEC = prop.get(PROP_DOMAIN + "blk.epoch.sec", 1); //2 seconds each block
   val BLK_EPOCH_MS = prop.get(PROP_DOMAIN + "blk.epoch.ms", 500); //2 seconds each block
   val BLK_NOOP_EPOCH_MS = prop.get(PROP_DOMAIN + "blk.noop.epoch.ms", 5000); //2 seconds each block
-  
+
   val TXS_EPOCH_MS = prop.get(PROP_DOMAIN + "txs.epoch.ms", 500);
   val MAX_WAIT_BLK_EPOCH_MS = prop.get(PROP_DOMAIN + "max.wait.blk.epoch.ms", 10 * 1000); //1 min to wait for next block mine 
 
@@ -36,7 +36,7 @@ object DConfig {
 
   val DTV_MUL_BLOCKS_EACH_TERM = prop.get(PROP_DOMAIN + "dtv.mul.blocks.each.term", 12);
   val DTV_BLOCKS_EACH_MINER = prop.get(PROP_DOMAIN + "dtv.blocks.each.miner", 6);
-  
+
   val DTV_MAX_SUPER_MINER = prop.get(PROP_DOMAIN + "dtv.max.super.miner", 19);
   val DTV_MIN_SUPER_MINER = prop.get(PROP_DOMAIN + "dtv.min.super.miner", 5);
   val DTV_TIME_MS_EACH_BLOCK = prop.get(PROP_DOMAIN + "dtv.time.ms.each_block", 100);
@@ -68,10 +68,13 @@ object DConfig {
   val FORCE_RESET_VOTE_TERM = prop.get(PROP_DOMAIN + "force.reset.vote.term", 0);
 
   val MAX_SYNC_BLOCKS = prop.get(PROP_DOMAIN + "max.sync.blocks", 3000);
-  
-   val VOTE_MAX_TERM_DISTANCE = prop.get(PROP_DOMAIN + "vote.max.term.distance", 1);
+
+  val VOTE_MAX_TERM_DISTANCE = prop.get(PROP_DOMAIN + "vote.max.term.distance", 1);
 
   val SYNC_SAFE_BLOCK_COUNT = prop.get(PROP_DOMAIN + "sync.safe.block.count", 8);
   
-   val CREATE_BLOCK_TX_CONFIRM_PERCENT = prop.get(PROP_DOMAIN + "create.block.tx.confirm.percent", 80);//80%
+  
+  val SYNC_TX_TPS_LIMIT = prop.get(PROP_DOMAIN + "sync.tx.tps.limit", 10000);//每秒钟最多1万笔交易同步
+
+  val CREATE_BLOCK_TX_CONFIRM_PERCENT = prop.get(PROP_DOMAIN + "create.block.tx.confirm.percent", 80); //80%
 }

@@ -20,6 +20,7 @@ import org.brewchain.bcapi.exec.SRunner
 import org.fc.brewchain.p22p.action.PMNodeHelper
 import org.brewchain.dposblk.pbgens.Dposblock.PSSyncTransaction.SyncType
 import java.math.BigInteger
+import java.util.concurrent.atomic.AtomicInteger
 
 case class TransactionSync(network: Network) extends SRunner with PMNodeHelper with LogHelper {
   def getName() = "TxSync"
@@ -31,29 +32,44 @@ case class TransactionSync(network: Network) extends SRunner with PMNodeHelper w
 object TxSync extends LogHelper {
   var instance: TransactionSync = TransactionSync(null);
   def dposNet(): Network = instance.network;
+  val lastSyncTime = new AtomicLong(0);
+  val lastSyncCount = new AtomicInteger(0);
 
+  def isLimitSyncSpeed(curTime: Long): Boolean = {
+    val tps = lastSyncCount.get * 1000 / (Math.abs((curTime - lastSyncTime.get)) + 1);
+    if (tps > DConfig.SYNC_TX_TPS_LIMIT) {
+      log.warn("speed limit :curTps=" + tps + ",timepass=" + (curTime - lastSyncTime.get) + ",lastSyncCount=" + lastSyncCount);
+      false
+    }
+    true;
+
+  }
   def trySyncTx(network: Network): Unit = {
+    val startTime = System.currentTimeMillis();
+    if (!isLimitSyncSpeed(startTime)) {
+      val res = Daos.txHelper.getWaitSendTxToSend(DConfig.MAX_TNX_EACH_BROADCAST)
+      if (res.getTxHashCount > 0) {
+        val msgid = UUIDGenerator.generate();
+        val syncTransaction = PSSyncTransaction.newBuilder();
+        syncTransaction.setMessageid(msgid);
+        syncTransaction.setSyncType(SyncType.ST_WALLOUT);
+        syncTransaction.setFromBcuid(network.root().bcuid);
+        for (x <- res.getTxHashList) {
+          syncTransaction.addTxHash(x)
+        }
 
-    val res = Daos.txHelper.getWaitSendTxToSend(DConfig.MAX_TNX_EACH_BROADCAST)
-    if (res.getTxHashCount > 0) {
-      val msgid = UUIDGenerator.generate();
-      val syncTransaction = PSSyncTransaction.newBuilder();
-      syncTransaction.setMessageid(msgid);
-      syncTransaction.setSyncType(SyncType.ST_WALLOUT);
-      syncTransaction.setFromBcuid(network.root().bcuid);
-      for (x <- res.getTxHashList) {
-        syncTransaction.addTxHash(x)
+        for (x <- res.getTxDatasList) {
+          syncTransaction.addTxDatas(x)
+        }
+
+        //      syncTransaction.addAllTxHash(res.getTxHashList);
+        //      syncTransaction.addAllTxDatas(res.getTxDatasList);
+        network.wallMessage("BRTDOB", Left(syncTransaction.build()), msgid)
+        lastSyncTime.set(startTime)
+        lastSyncCount.set(res.getTxHashCount)
+      } else {
+        //        log.debug("not found transaction for broadcast:" + res.getTxHexStrCount())
       }
-
-      for (x <- res.getTxDatasList) {
-        syncTransaction.addTxDatas(x)
-      }
-
-      //      syncTransaction.addAllTxHash(res.getTxHashList);
-      //      syncTransaction.addAllTxDatas(res.getTxDatasList);
-      network.wallMessage("BRTDOB", Left(syncTransaction.build()), msgid)
-    } else {
-      //        log.debug("not found transaction for broadcast:" + res.getTxHexStrCount())
     }
   }
 }
