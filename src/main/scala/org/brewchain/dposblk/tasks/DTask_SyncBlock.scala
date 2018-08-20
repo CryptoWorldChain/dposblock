@@ -22,7 +22,7 @@ import org.brewchain.dposblk.utils.DConfig
 //获取其他节点的term和logidx，commitidx
 case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
     network: Network, fastNodeID: String,
-    runCounter: AtomicLong) extends SRunner with PMNodeHelper with LogHelper {
+    runCounter: AtomicLong,syncSafeBlock:Boolean=true) extends SRunner with PMNodeHelper with LogHelper {
   def getName(): String = "SyncBlock:" + startIdx + "-" + (endIdx)
 
   def runOnce() = {
@@ -76,11 +76,11 @@ case class DTask_SyncBlock(startIdx: Int, endIdx: Int,
                       log.debug("sync block height ok=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
                     } else {
                       log.debug("sync block height failed=" + b.getBlockHeight + ",dbh=" + acceptedHeight);
-                      if (acceptedHeight == DCtrl.curDN().getCurBlock &&
+                      if (syncSafeBlock&&acceptedHeight == DCtrl.curDN().getCurBlock &&
                         DCtrl.curDN().getCurBlock + 1 == b.getBlockHeight) {
                         log.debug("try to sync prev-safe blocks:start=" + DCtrl.curDN().getCurBlock + ",count=" + DConfig.SYNC_SAFE_BLOCK_COUNT + ",from=" + fastNodeID)
                         new DTask_SyncBlock(DCtrl.curDN().getCurBlock - DConfig.SYNC_SAFE_BLOCK_COUNT, DCtrl.curDN().getCurBlock + 1 + DConfig.SYNC_SAFE_BLOCK_COUNT / 2,
-                          network, fastNodeID, new AtomicLong(1)).runOnce();
+                          network, fastNodeID, new AtomicLong(1),false).runOnce();
                       }
                     }
                     if (acceptedHeight > maxid) {
