@@ -137,7 +137,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                   //check rewrite
                   log.debug("checkMiner --> dutytermvote pbo.getBlockRange.getStartBlock::" + pbo.getBlockRange.getStartBlock);
                   val (isMiner, isOverrided) = DCtrl.checkMiner(pbo.getBlockRange.getStartBlock, pbo.getCoAddress, System.currentTimeMillis(), Thread.currentThread().getName())
-                  if (!isOverrided || !isMiner) { //
+                  if (!isOverrided && !isMiner) { //
                     log.debug("Not your Miner Voted!!isMiner=" + isMiner + ",isOverrided=" + isOverrided
                       + ",B=" + cn.getCurBlock + ",BS=[" + pbo.getBlockRange.getStartBlock + "," + pbo.getBlockRange.getEndBlock
                       + "],VM=" + vq.getMessageId + ",LTM=" + pbo.getLastTermUid
