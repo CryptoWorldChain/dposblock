@@ -18,6 +18,8 @@ import org.brewchain.dposblk.pbgens.Dposblock.PSSyncTransaction
 import org.brewchain.dposblk.Daos
 import org.brewchain.bcapi.exec.SRunner
 import org.fc.brewchain.p22p.action.PMNodeHelper
+import org.brewchain.dposblk.pbgens.Dposblock.PSSyncTransaction.SyncType
+import java.math.BigInteger
 
 case class TransactionSync(network: Network) extends SRunner with PMNodeHelper with LogHelper {
   def getName() = "TxSync"
@@ -37,7 +39,8 @@ object TxSync extends LogHelper {
       val msgid = UUIDGenerator.generate();
       val syncTransaction = PSSyncTransaction.newBuilder();
       syncTransaction.setMessageid(msgid);
-
+      syncTransaction.setSyncType(SyncType.ST_WALLOUT);
+      syncTransaction.setFromBcuid(network.root().bcuid);
       for (x <- res.getTxHashList) {
         syncTransaction.addTxHash(x)
       }
@@ -48,7 +51,7 @@ object TxSync extends LogHelper {
 
       //      syncTransaction.addAllTxHash(res.getTxHashList);
       //      syncTransaction.addAllTxDatas(res.getTxDatasList);
-      network.dwallMessage("BRTDOB", Left(syncTransaction.build()), msgid)
+      network.wallMessage("BRTDOB", Left(syncTransaction.build()), msgid)
     } else {
       //        log.debug("not found transaction for broadcast:" + res.getTxHexStrCount())
     }

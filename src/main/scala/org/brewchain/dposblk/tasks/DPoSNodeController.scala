@@ -386,7 +386,10 @@ object DCtrl extends LogHelper {
   }
   def createNewBlock(txc: Int): BlockEntity.Builder = {
     Daos.blkHelper.synchronized({
-      val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock, "");
+      val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock
+          ,//只是打块！其中某些成功广播的tx，默认是80%
+          (DCtrl.coMinerByUID.size * DConfig.CREATE_BLOCK_TX_CONFIRM_PERCENT/100).asInstanceOf[Int] , 
+      "");
       val newblockheight = curDN().getCurBlock + 1
       if (newblk == null || newblk.getHeader == null) {
         log.debug("new block header is null: ch=" + newblockheight + ",dbh=" + newblk);

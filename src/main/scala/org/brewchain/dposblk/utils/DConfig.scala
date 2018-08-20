@@ -72,4 +72,6 @@ object DConfig {
    val VOTE_MAX_TERM_DISTANCE = prop.get(PROP_DOMAIN + "vote.max.term.distance", 1);
 
   val SYNC_SAFE_BLOCK_COUNT = prop.get(PROP_DOMAIN + "sync.safe.block.count", 8);
+  
+   val CREATE_BLOCK_TX_CONFIRM_PERCENT = prop.get(PROP_DOMAIN + "create.block.tx.confirm.percent", 80);//80%
 }

@@ -29,6 +29,10 @@ import org.brewchain.evmapi.gens.Tx.MultiTransaction
 import scala.collection.JavaConversions._
 import org.apache.commons.lang3.StringUtils
 import java.util.ArrayList
+import java.math.BigInteger
+import org.brewchain.dposblk.pbgens.Dposblock.PSSyncTransaction.SyncType
+import org.brewchain.account.bean.HashPair
+import onight.tfw.outils.serialize.UUIDGenerator
 
 @NActorProvider
 @Instantiate
@@ -45,17 +49,56 @@ object PDPoSTransactionSyncService extends LogHelper with PBUtils with LService[
       handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
     } else {
       try {
-        val dbsaveList = new ArrayList[MultiTransaction.Builder]();
-        for (x <- pbo.getTxDatasList) {
-          var oMultiTransaction = MultiTransaction.newBuilder();
-          oMultiTransaction.mergeFrom(x);
-          if (!StringUtils.equals(DCtrl.curDN().getBcuid, oMultiTransaction.getTxNode().getBcuid)) {
-//            Daos.txHelper.syncTransaction(oMultiTransaction);
-            dbsaveList.add(oMultiTransaction)
+        MDCSetBCUID(DCtrl.dposNet())
+        MDCSetMessageID(pbo.getMessageid)
+
+        var bits = new BigInteger("" + DCtrl.instance.network.root().node_idx);
+        val confirmNode =
+          pbo.getSyncType match {
+            case SyncType.ST_WALLOUT =>
+              DCtrl.instance.network.nodeByBcuid(pbo.getFromBcuid);
+            case _ =>
+              DCtrl.instance.network.nodeByBcuid(pbo.getConfirmBcuid);
           }
-          //批量入库
-           Daos.txHelper.syncTransaction(dbsaveList);
+
+        if (confirmNode != DCtrl.instance.network.noneNode) {
+
+          bits = bits.setBit(confirmNode.node_idx);
+          pbo.getSyncType match {
+            case SyncType.ST_WALLOUT =>
+              val dbsaveList = new ArrayList[MultiTransaction.Builder]();
+              for (x <- pbo.getTxDatasList) {
+                var oMultiTransaction = MultiTransaction.newBuilder();
+                oMultiTransaction.mergeFrom(x);
+                if (!StringUtils.equals(DCtrl.curDN().getBcuid, oMultiTransaction.getTxNode().getBcuid)) {
+                  //            Daos.txHelper.syncTransaction(oMultiTransaction);
+                  dbsaveList.add(oMultiTransaction)
+                }
+                //批量入库
+              }
+              Daos.txHelper.syncTransaction(dbsaveList, bits);
+
+              //resend
+              val msgid = UUIDGenerator.generate();
+              val syncTransaction = PSSyncTransaction.newBuilder();
+              syncTransaction.setMessageid(msgid);
+              syncTransaction.setSyncType(SyncType.ST_CONFIRM_RECV);
+              syncTransaction.setFromBcuid(pbo.getFromBcuid);
+              syncTransaction.setConfirmBcuid(DCtrl.instance.network.root().bcuid)
+              syncTransaction.addAllTxHash(pbo.getTxHashList);
+              //      syncTransaction.addAllTxHash(res.getTxHashList);
+              //      syncTransaction.addAllTxDatas(res.getTxDatasList);
+              DCtrl.instance.network.wallMessage("BRTDOB", Left(syncTransaction.build()), msgid)
+
+            case _ =>
+              pbo.getTxHashList.map { txHash =>
+                Daos.txHelper.confirmRecvTx(Hex.encodeHexString(txHash.toByteArray()), bits);
+              }
+          }
+        } else {
+          log.debug("cannot find bcuid from network:" + pbo.getConfirmBcuid + "," + pbo.getFromBcuid + ",synctype="+pbo.getSyncType);
         }
+
         ret.setRetCode(1)
       } catch {
         case t: Throwable => {

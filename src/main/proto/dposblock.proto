@@ -218,7 +218,14 @@ message PSSyncTransaction {
 	repeated bytes txHash = 1;
 	repeated bytes txDatas = 2;
 	string messageid = 3;
-	
+	enum SyncType{
+		ST_WALLOUT = 0;
+		ST_CONFIRM_RECV = 1;
+		ST_INBLOCK = 2;		
+	}
+	SyncType syncType = 4;
+	string from_bcuid = 5;
+	string confirm_bcuid = 6;
 }
 
 message PRetSyncTransaction {
