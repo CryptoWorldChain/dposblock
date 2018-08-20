@@ -39,9 +39,10 @@ object TxSync extends LogHelper {
     val tps = lastSyncCount.get * 1000 / (Math.abs((curTime - lastSyncTime.get)) + 1);
     if (tps > DConfig.SYNC_TX_TPS_LIMIT) {
       log.warn("speed limit :curTps=" + tps + ",timepass=" + (curTime - lastSyncTime.get) + ",lastSyncCount=" + lastSyncCount);
+      true
+    } else {
       false
     }
-    true;
 
   }
   def trySyncTx(network: Network): Unit = {
