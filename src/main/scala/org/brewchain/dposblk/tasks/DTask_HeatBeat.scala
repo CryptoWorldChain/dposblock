@@ -21,24 +21,32 @@ import org.brewchain.dposblk.pbgens.Dposblock.PDNodeOrBuilder
 import org.brewchain.dposblk.pbgens.Dposblock.DNodeState
 import org.brewchain.bcapi.exec.SRunner
 import org.fc.brewchain.p22p.action.PMNodeHelper
+import java.util.concurrent.atomic.AtomicBoolean
+import org.fc.brewchain.p22p.node.Node
+import org.brewchain.dposblk.utils.DConfig
 
 //获取其他节点的term和logidx，commitidx
 case class DTask_HeatBeat() extends SRunner with PMNodeHelper with LogHelper {
   def getName(): String = "HeatBeat-Dpos"
 
+  var onScheduled = false;
+  val running = new AtomicBoolean(false);
   def runOnce() = {
     //
-    try {
-      val network = DCtrl.dposNet();
-      MDCSetBCUID(network)
-      val messageid = UUIDGenerator.generate();
-      MDCSetMessageID(messageid)
-      checkDNodeLostInMiner(network);
-      checkCoMinerLostInDnode(network);
-    } catch {
-      case e: Throwable =>
-        log.error("SyncError:" + e.getMessage, e)
-    } finally {
+    if (running.compareAndSet(false, true)) {
+      try {
+        val network = DCtrl.dposNet();
+        MDCSetBCUID(network)
+        val messageid = UUIDGenerator.generate();
+        MDCSetMessageID(messageid)
+        checkDNodeLostInMiner(network);
+        checkCoMinerLostInDnode(network);
+      } catch {
+        case e: Throwable =>
+          log.error("SyncError:" + e.getMessage, e)
+      } finally {
+        running.set(false);
+      }
     }
   }
   def checkDNodeLostInMiner(network: Network): Unit = {
@@ -102,7 +110,7 @@ case class DTask_HeatBeat() extends SRunner with PMNodeHelper with LogHelper {
           }
         })
       }
-      cdl.await();
+      cdl.await(DConfig.HEATBEAT_TICK_SEC, TimeUnit.SECONDS);
     } catch {
       case t: Throwable =>
         log.error("error in HeatBeat:", t);
@@ -125,6 +133,57 @@ case class DTask_HeatBeat() extends SRunner with PMNodeHelper with LogHelper {
     } catch {
       case t: Throwable =>
         log.error("error in HeatBeat:", t);
+    }
+  }
+  def trySyncMinerInfo(lostM: Iterable[Node], network: Network): Unit = {
+    val join = PSCoMine.newBuilder().setDn(DCtrl.curDN())
+      .build();
+    var fastNode: PDNodeOrBuilder = DCtrl.curDN();
+    var minCost: Long = Long.MaxValue;
+    var maxBlockHeight: Long = 0;
+
+    log.debug("trySyncMinerInfo:lostMsize=" + lostM.size + ",lostM=" + lostM.foldLeft("")((a,b)=>a+","+b.bcuid));
+    lostM.map { n =>
+      val start = System.currentTimeMillis();
+      network.asendMessage("JINDOB", join, n, new CallBack[FramePacket] {
+        def onSuccess(fp: FramePacket) = {
+          try {
+            val end = System.currentTimeMillis();
+            val retjoin = if (fp.getBody != null) {
+              PRetCoMine.newBuilder().mergeFrom(fp.getBody);
+            } else if (fp.getFbody != null && fp.getFbody.isInstanceOf[PRetCoMine]) {
+              fp.getFbody.asInstanceOf[PRetCoMine]
+            } else {
+              null;
+            }
+            MDCSetBCUID(network)
+            if (retjoin != null && retjoin.getRetCode() == 0) { //same message
+              log.debug("send JINDOB success:to " + n.uri + ",bcuid=" + n.bcuid + ",code=" + retjoin.getRetCode)
+              if (fastNode == null) {
+                fastNode = retjoin.getDn;
+              } else if (retjoin.getDn.getCurBlock > fastNode.getCurBlock) {
+                fastNode = retjoin.getDn;
+                minCost = end - start
+              } else if (retjoin.getDn.getCurBlock == fastNode.getCurBlock) {
+                if (end - start < minCost) { //set the fast node
+                  minCost = end - start
+                  fastNode = retjoin.getDn;
+                }
+              }
+              log.debug("get SYNC-JINDOB nodeInfo:B=" + retjoin.getDn.getCurBlock + ",state=" + retjoin.getCoResult);
+              if (retjoin.getCoResult == DNodeState.DN_CO_MINER) {
+                DCtrl.coMinerByUID.put(retjoin.getDn.getBcuid, retjoin.getDn);
+              }
+            } else {
+              log.debug("send SYNC-JINDOB Failed " + n.uri + ",bcuid=" + n.bcuid + ",retobj=" + retjoin)
+            }
+          } finally {
+          }
+        }
+        def onFailed(e: java.lang.Exception, fp: FramePacket) {
+          log.debug("send SYNC-JINDOB ERROR " + n.uri + ",bcuid=" + n.bcuid + ",e=" + e.getMessage, e)
+        }
+      })
     }
   }
 }

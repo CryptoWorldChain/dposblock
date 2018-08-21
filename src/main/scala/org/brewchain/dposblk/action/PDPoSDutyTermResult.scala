@@ -93,7 +93,7 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
                 .setTermStartBlock(pbo.getCurTermStartBlock)
                 .build());
             } else {
-              log.debug("update term:" + pbo.getCurTermid + ",for bcuid=" + pbo.getBcuid + ",termid=" + pbo.getTermId + ",sign=" + pbo.getSign)
+              log.debug("update term:" + pbo.getCurTermid + ",for bcuid=" + pbo.getBcuid + ",termid=" + pbo.getTermId + ",sign=" + pbo.getSign + ",result=" + pbo.getResult)
               val (n_termid, n_termsig) =
                 if (pbo.getCurBlock < pbo.getVoteTermStartBlock - 10 && pbo.getCurTermid < pbo.getTermId - 2) {
                   (pbo.getCurTermid, pbo.getCurTermSign)
@@ -107,6 +107,8 @@ object PDPoSDutyTermResult extends LogHelper with PBUtils with LService[PDutyTer
 
             }
           case None =>
+            log.debug("unknow cominer:" + pbo.getBcuid + ",term:" + pbo.getCurTermid + ",for bcuid=" + pbo.getBcuid + ",termid=" + pbo.getTermId + ",sign=" + pbo.getSign + ",result=" + pbo.getResult);
+            
         }
         DTask_DutyTermVote.synchronized({
           DTask_DutyTermVote.notifyAll()

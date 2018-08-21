@@ -138,6 +138,21 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
 
     Daos.dpospropdb.put(DPOS_NODE_DB_TERM,
       OValue.newBuilder().setExtdata(term_Miner.build().toByteString()).build())
+    val lostM = Map[String, Node]();
+    term_Miner.getMinerQueueList.map { mq =>
+      if (DCtrl.coMinerByUID.filter(f => mq.getMinerCoaddr.equals(f._2.getCoAddress)).size == 0) {
+        network.directNodes.map { dn =>
+          if (dn.v_address.equals(mq.getMinerCoaddr)) {
+            lostM.put(dn.bcuid, dn);
+          }
+        }
+      }
+    }
+    if(lostM.size>0)
+    {
+      hbTask.trySyncMinerInfo(lostM.values, network)
+    }
+
   }
   def updateBlockHeight(blockHeight: Int) = {
     log.debug("checkMiner --> updateBlockHeight blockHeight::" + blockHeight + " cur_dnode.getCurBlock::" + cur_dnode.getCurBlock);
@@ -154,6 +169,7 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
       })
     }
   }
+  val hbTask = DTask_HeatBeat();
   def runOnce() = {
     Thread.currentThread().setName("DCTRL");
     implicit val _net = network
@@ -183,7 +199,8 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
             continue = DTask_CoMine.runOnce match {
               case n: PDNode if n == cur_dnode =>
                 log.debug("dpos cominer init ok:" + n);
-                Scheduler.scheduleWithFixedDelay(DTask_HeatBeat(), 60, DConfig.HEATBEAT_TICK_SEC, TimeUnit.SECONDS);
+                Scheduler.scheduleWithFixedDelay(hbTask, 60, DConfig.HEATBEAT_TICK_SEC, TimeUnit.SECONDS);
+                hbTask.onScheduled = true;
                 true;
               case n: PDNode if !n.equals(cur_dnode) =>
                 log.debug("dpos waiting for init:" + n);
@@ -193,6 +210,10 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
                 false
             }
           case DNodeState.DN_CO_MINER =>
+            if (!hbTask.onScheduled) {
+              Scheduler.scheduleWithFixedDelay(hbTask, 60, DConfig.HEATBEAT_TICK_SEC, TimeUnit.SECONDS);
+              hbTask.onScheduled = true;
+            }
             if (DTask_DutyTermVote.runOnce) {
               continue = true;
               cur_dnode.setState(DNodeState.DN_DUTY_MINER);
