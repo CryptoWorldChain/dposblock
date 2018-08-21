@@ -382,7 +382,6 @@ object DTask_DutyTermVote extends LogHelper {
         .setTermStartMs(System.currentTimeMillis());
 
       if (overridedBlock > 0 && StringUtils.isNotBlank(omitCoaddr)) {
-        newterm.setCoNodes(newterm.getCoNodes - DCtrl.coMinerByUID.filter(p => p._2.getCoAddress.equals(omitCoaddr)).size)
         log.debug("overrideBlockedVoteWithOmit!TID=" + tm.getTermId + ",Tuid=" + tm.getSign + ",block=" + overridedBlock + ",cur=" + cn.getCurBlock);
         newterm.setRewriteTerm(RewriteTerm.newBuilder().setBlockLost(overridedBlock)
           .setRewriteMs(System.currentTimeMillis()).setTermStartMs(tm.getTermStartMs))
