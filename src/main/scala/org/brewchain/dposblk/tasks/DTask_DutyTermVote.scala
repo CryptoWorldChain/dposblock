@@ -403,13 +403,13 @@ object DTask_DutyTermVote extends LogHelper {
         .setSign(msgid)
 
       val rand = Math.random() * 1000
-      val rdns = scala.util.Random.shuffle(quantifyminers);
+//      val rdns = scala.util.Random.shuffle(quantifyminers);
       //      log.debug(" rdns=" + rdns.foldLeft("")((a, b) => a + "," + b._1));
       var i = newterm.getBlockRange.getStartBlock;
       var bitcc = BigInt(0);
 
       while (newterm.getMinerQueueCount < mineBlockCount) {
-        rdns.map { x =>
+        scala.util.Random.shuffle(quantifyminers).map { x =>
           if (newterm.getMinerQueueCount < mineBlockCount) {
             //              log.debug(" add miner at Queue," + x._2.getCoAddress + ",blockheight=" + i);
             for (bi <- 1 to DConfig.DTV_BLOCKS_EACH_MINER) {
