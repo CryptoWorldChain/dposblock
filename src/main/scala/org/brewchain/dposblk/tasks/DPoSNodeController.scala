@@ -148,8 +148,7 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
         }
       }
     }
-    if(lostM.size>0)
-    {
+    if (lostM.size > 0) {
       hbTask.trySyncMinerInfo(lostM.values, network)
     }
 
@@ -368,17 +367,19 @@ object DCtrl extends LogHelper {
             } else {
               log.debug("wait for timeout to Mine:ShouldT=" + (blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) + ",realblkmine=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockMs
                 + ",TermLeft=" + termblockLeft);
-              if (realblkMineMS < blkshouldMineMS + DConfig.BLK_EPOCH_MS) {
+              if (realblkMineMS < blkshouldMineMS) {
                 Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
               } else {
                 //request block if not sync
-                var bestfastUID = ""
-                coMinerByUID.map { f =>
-                  if (f._2.getCoAddress.equals(n)) {
-                    bestfastUID = f._2.getBcuid;
+                if (System.currentTimeMillis() > blkshouldMineMS + DConfig.BLK_EPOCH_MS) {
+                  var bestfastUID = ""
+                  coMinerByUID.map { f =>
+                    if (f._2.getCoAddress.equals(n)) {
+                      bestfastUID = f._2.getBcuid;
+                    }
                   }
+                  BlockSync.tryBackgroundSyncLogs(block, bestfastUID)(dposNet());
                 }
-                BlockSync.tryBackgroundSyncLogs(block, bestfastUID)(dposNet());
               }
               (false, false)
             }
