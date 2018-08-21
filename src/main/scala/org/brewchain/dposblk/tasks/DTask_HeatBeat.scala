@@ -33,11 +33,21 @@ case class DTask_HeatBeat() extends SRunner with PMNodeHelper with LogHelper {
       MDCSetBCUID(network)
       val messageid = UUIDGenerator.generate();
       MDCSetMessageID(messageid)
+      checkDNodeLostInMiner(network);
+      checkCoMinerLostInDnode(network);
+    } catch {
+      case e: Throwable =>
+        log.error("SyncError:" + e.getMessage, e)
+    } finally {
+    }
+  }
+  def checkDNodeLostInMiner(network: Network): Unit = {
+    try {
       val start = System.currentTimeMillis();
       val lostM = network.directNodeByBcuid.filter({ p =>
         !DCtrl.coMinerByUID.contains(p._1)
       })
-      log.debug("HeatBeat:LostM=" + lostM.size + ":" + lostM.foldLeft("")((a, B) => a + B._1 + ",") + ",MN=" + DCtrl.coMinerByUID.size + ",DN=" +
+      log.debug("HeatBeat:DNodeLostInMiner=" + lostM.size + ":" + lostM.foldLeft("")((a, B) => a + B._1 + ",") + ",MN=" + DCtrl.coMinerByUID.size + ",DN=" +
         network.directNodeByBcuid.size + ",PN=" + network.pendingNodeByBcuid.size);
       val cdl = new CountDownLatch(lostM.size)
       val join = PSCoMine.newBuilder().setDn(DCtrl.curDN())
@@ -88,15 +98,33 @@ case class DTask_HeatBeat() extends SRunner with PMNodeHelper with LogHelper {
           def onFailed(e: java.lang.Exception, fp: FramePacket) {
             cdl.countDown()
             log.debug("send HB-JINDOB ERROR " + n._2.uri + ",e=" + e.getMessage, e)
+            network.removeDNode(n._2);
           }
         })
       }
       cdl.await();
+    } catch {
+      case t: Throwable =>
+        log.error("error in HeatBeat:", t);
+    }
+  }
+
+  def checkCoMinerLostInDnode(network: Network): Unit = {
+    try {
+      val start = System.currentTimeMillis();
+      val lostM = DCtrl.coMinerByUID.filter({ p =>
+        !network.directNodeByBcuid.contains(p._1)
+      })
+      log.debug("HeatBeat:CoMinerLostInDNode=" + lostM.size + ":" + lostM.foldLeft("")((a, B) => a + B._1 + ",") + ",MN=" + DCtrl.coMinerByUID.size + ",DN=" +
+        network.directNodeByBcuid.size + ",PN=" + network.pendingNodeByBcuid.size);
+      lostM.map(p => {
+        DCtrl.coMinerByUID.remove(p._1)
+        log.debug("drop comainer for not in dnode:" + p._1 + ",coadr=" + p._2.getCoAddress);
+      })
 
     } catch {
-      case e: Throwable =>
-        log.error("SyncError:" + e.getMessage, e)
-    } finally {
+      case t: Throwable =>
+        log.error("error in HeatBeat:", t);
     }
   }
 }

@@ -296,13 +296,17 @@ object DCtrl extends LogHelper {
 
   def checkMiner(block: Int, coaddr: String, mineTime: Long, threadName: String, maxWaitMS: Long = 1L): (Boolean, Boolean) = {
     val tm = termMiner().getBlockRange;
+    val lastBlkTime = if (block == 1) termMiner().getTermStartMs else
+      Math.max(Daos.blkHelper.GetBestBlock().getHeader.getTimestamp, termMiner().getTermStartMs);
+    val blkshouldMineMS = tm.getEachBlockMs + lastBlkTime
+
     log.debug("checkMiner --> block::" + block + " curDN.getCurBlock::" + curDN.getCurBlock + " tm.getEndBlock::" + tm.getEndBlock + " tm.getStartBlock::" + tm.getStartBlock + " coaddr::" + coaddr)
     if (block > tm.getEndBlock || block < tm.getStartBlock) {
       log.debug("checkMiner:False,block too large:" + block + ",[" + tm.getStartBlock + "," + tm.getEndBlock + "],sign="
         + termMiner.getSign + ",TID=" + termMiner.getTermId)
       val maxblk = Math.max(block, tm.getEndBlock)
       log.debug("checkMiner --> maxblk::" + maxblk + " curDN.getCurBlock::" + curDN.getCurBlock)
-      if (maxblk > curDN.getCurBlock) {
+      if (maxblk > curDN.getCurBlock && System.currentTimeMillis() > blkshouldMineMS + DConfig.BLK_EPOCH_MS) {
         val fastuid = DCtrl.getFastNode();
         if (!StringUtils.equals(fastuid, curDN.getBcuid)) {
           BlockSync.tryBackgroundSyncLogs(maxblk, fastuid)(DCtrl.dposNet())
@@ -310,9 +314,6 @@ object DCtrl extends LogHelper {
       }
       (false, false)
     } else {
-      val lastBlkTime = if (block == 1)  termMiner().getTermStartMs else
-        Math.max(Daos.blkHelper.GetBestBlock().getHeader.getTimestamp, termMiner().getTermStartMs);
-      val blkshouldMineMS = tm.getEachBlockMs + lastBlkTime
       val realblkMineMS = mineTime;
       val termblockLeft = block - tm.getEndBlock
       minerByBlockHeight(block) match {
@@ -346,7 +347,7 @@ object DCtrl extends LogHelper {
             } else {
               log.debug("wait for timeout to Mine:ShouldT=" + (blkshouldMineMS + DConfig.MAX_WAIT_BLK_EPOCH_MS) + ",realblkmine=" + realblkMineMS + ",eachBlockSec=" + tm.getEachBlockMs
                 + ",TermLeft=" + termblockLeft);
-              if (realblkMineMS < blkshouldMineMS) {
+              if (realblkMineMS < blkshouldMineMS + DConfig.BLK_EPOCH_MS) {
                 Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
               } else {
                 //request block if not sync
@@ -386,10 +387,9 @@ object DCtrl extends LogHelper {
   }
   def createNewBlock(txc: Int): BlockEntity.Builder = {
     Daos.blkHelper.synchronized({
-      val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock
-          ,//只是打块！其中某些成功广播的tx，默认是80%
-          (DCtrl.coMinerByUID.size * DConfig.CREATE_BLOCK_TX_CONFIRM_PERCENT/100).asInstanceOf[Int] , 
-      "");
+      val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock, //只是打块！其中某些成功广播的tx，默认是80%
+        (DCtrl.coMinerByUID.size * DConfig.CREATE_BLOCK_TX_CONFIRM_PERCENT / 100).asInstanceOf[Int],
+        "");
       val newblockheight = curDN().getCurBlock + 1
       if (newblk == null || newblk.getHeader == null) {
         log.debug("new block header is null: ch=" + newblockheight + ",dbh=" + newblk);
