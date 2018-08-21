@@ -238,11 +238,10 @@ object DTask_DutyTermVote extends LogHelper {
       } else if ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock
         || JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) > DConfig.DTV_TIMEOUT_SEC)
         && System.currentTimeMillis() > ban_for_vote_sec &&
-        ( (cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock) ||
-            JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) > DConfig.DTV_TIMEOUT_SEC)&&
-            (cn.getCurBlock + 1  >= tm.getBlockRange.getStartBlock)
-        && vq.getTermId <= tm.getTermId + 1 )
-      {
+        ((cn.getCurBlock + DConfig.DTV_BEFORE_BLK >= tm.getBlockRange.getEndBlock) ||
+          JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) > DConfig.DTV_TIMEOUT_SEC) &&
+          (cn.getCurBlock + 1 >= tm.getBlockRange.getStartBlock)
+          && vq.getTermId <= tm.getTermId + 1) {
         //        cn.setCominerStartBlock(1)
         val msgid = UUIDGenerator.generate();
         MDCSetMessageID(msgid);
@@ -251,11 +250,11 @@ object DTask_DutyTermVote extends LogHelper {
           StringUtils.isNotBlank(tm.getSign) && tm.getCoNodes > 1) {
           val idx = (Math.abs(tm.getSign.hashCode()) % tm.getMinerQueueCount)
           val coMiner = tm.getMinerQueue(idx).getMinerCoaddr;
-          if(coMiner.equals(cn.getCoAddress)){
+          if (coMiner.equals(cn.getCoAddress)) {
             true;
-          }else{
-            log.debug("can not vote: current cominer not in last term:" + coMiner  + ",curr=" + cn.getCoAddress + ",tmsign=" +
-              tm.getSign+",queuecount="+tm.getMinerQueueCount+",idx="+idx);
+          } else {
+            log.debug("can not vote: current cominer not in last term:" + coMiner + ",curr=" + cn.getCoAddress + ",tmsign=" +
+              tm.getSign + ",queuecount=" + tm.getMinerQueueCount + ",idx=" + idx);
             false;
           }
         } else {
@@ -265,30 +264,7 @@ object DTask_DutyTermVote extends LogHelper {
           JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) > DConfig.DTV_TIMEOUT_SEC
         }
         var maxtermid = tm.getTermId;
-        Votes.vote(DCtrl.coMinerByUID.map(p => p._2).toList).PBFTVote({ p => Some(p.getTermSign, p.getTermId, p.getTermStartBlock, p.getTermEndBlock) }, DCtrl.coMinerByUID.size) match {
-          case Converge((sign: String, termid: Int, startBlk: Int, endBlk: Int)) => //get termid
-            if ((StringUtils.isBlank(sign)  || startBlk <= 0 || endBlk <= 0 ||
-              sign.equals(tm.getSign) && termid == tm.getTermId) &&
-              cn.getCurBlock >= startBlk &&
-              cn.getCurBlock <= endBlk) {
-              canvote = true;
-            } else {
-              canvote = false;
-              log.debug("can not vote: pbft converge but not equals to local :sign=" +sign  + ",termid=" + termid + ",startBlk=" +
-                startBlk+",endBlk="+endBlk+",curtermid="+tm.getTermId+",curblock="+cn.getCurBlock);
-            }
-            maxtermid = termid;
-          case _ => //cannot converge, find the max size.
-            DCtrl.coMinerByUID.map(p => {
-              if (p._2.getTermId > tm.getTermId && p._2.getTermEndBlock >= cn.getCurBlock) {
-                log.debug("cannot vote:termid=" + p._2.getTermId + "->" + p._2.getBcuid + ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
-                canvote = false;
-                if (p._2.getTermId > maxtermid) {
-                  maxtermid = p._2.getTermId;
-                }
-              }
-            })
-        }
+        DCtrl.coMinerByUID.map(p => if (p._2.getTermId > maxtermid) { maxtermid = p._2.getTermId })
 
         if (tm.getMinerQueueCount > 0 && cn.getCurBlock > 0 && tm.getMinerQueueList.filter { m => m.getMinerCoaddr.equals(cn.getCoAddress) }.size == 0) {
           log.debug("cannot vote:term miner queue not include current:" + cn.getCoAddress);
@@ -336,30 +312,58 @@ object DTask_DutyTermVote extends LogHelper {
       //            (StringUtils.isBlank(tm.getSign) || StringUtils.equals(p._2.getTermSign, tm.getSign) ||
       //              StringUtils.equals(p._2.getTermSign, tm.getLastTermUid))))
 
-      if ( p._2.getCoAddress.equals(cn.getCoAddress)
-          ||( !StringUtils.equals(omitCoaddr, p._2.getCoAddress)
+      if (p._2.getCoAddress.equals(cn.getCoAddress)
+        || (!StringUtils.equals(omitCoaddr, p._2.getCoAddress)
           &&
           (
-            p._2.getCurBlock >= tm.getBlockRange.getStartBlock - 1 - Math.abs(DConfig.BLOCK_DISTANCE_COMINE) 
+            p._2.getCurBlock >= tm.getBlockRange.getStartBlock - 1 - Math.abs(DConfig.BLOCK_DISTANCE_COMINE)
             &&
             (tm.getLastTermId == p._2.getTermId || tm.getTermId >= p._2.getTermId)
             &&
             (
               StringUtils.isBlank(tm.getSign)
               ||
-               StringUtils.isNotBlank(p._2.getTermSign) &&
-              (StringUtils.equals(p._2.getTermSign, tm.getSign)||
-                  StringUtils.equals(p._2.getTermSign, tm.getSign)))))) {
+              StringUtils.isNotBlank(p._2.getTermSign) &&
+              (StringUtils.equals(p._2.getTermSign, tm.getSign) ||
+                StringUtils.equals(p._2.getTermSign, tm.getSign)))))) {
         true
       } else {
         log.debug("remove unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
           + ",cn=" + cn.getCurBlock
-          + ",termstartblk=" + tm.getBlockRange.getStartBlock+"/"+(tm.getBlockRange.getStartBlock - 1 - Math.abs(DConfig.BLOCK_DISTANCE_COMINE))
+          + ",termstartblk=" + tm.getBlockRange.getStartBlock + "/" + (tm.getBlockRange.getStartBlock - 1 - Math.abs(DConfig.BLOCK_DISTANCE_COMINE))
           + ",TID=" + tm.getTermId + ",LTID=" + tm.getLastTermId + ",PT=" + p._2.getTermId
-          + ",pbtsign=" + p._2.getTermSign + ",tmsign=" + tm.getSign + ",lasttmsig=" + tm.getLastTermUid+",omitCoaddr="+omitCoaddr)
+          + ",pbtsign=" + p._2.getTermSign + ",tmsign=" + tm.getSign + ",lasttmsig=" + tm.getLastTermUid + ",omitCoaddr=" + omitCoaddr)
         false;
       })
+    var canvote = true;
     if (quantifyminers.size > 0) {
+
+      Votes.vote(quantifyminers.map(p => p._2).toList).PBFTVote({ p => Some(p.getTermSign, p.getTermId, p.getTermStartBlock, p.getTermEndBlock) }, quantifyminers.size) match {
+        case Converge((sign: String, termid: Int, startBlk: Int, endBlk: Int)) => //get termid
+          if ((StringUtils.isBlank(sign) || startBlk <= 0 || endBlk <= 0 ||
+            sign.equals(tm.getSign) && termid == tm.getTermId) &&
+            cn.getCurBlock >= startBlk &&
+            cn.getCurBlock <= endBlk) {
+            canvote = true;
+          } else {
+            canvote = false;
+            log.debug("can not vote: pbft converge but not equals to local :sign=" + sign + ",termid=" + termid + ",startBlk=" +
+              startBlk + ",endBlk=" + endBlk + ",curtermid=" + tm.getTermId + ",curblock=" + cn.getCurBlock);
+          }
+        case n @ _ => //cannot converge, find the max size.
+          log.debug("can not merge: " + n + ",curtermsign=" + tm.getSign + ",startBlk=" +
+            tm.getBlockRange.getStartBlock + ",endBlk=" + tm.getBlockRange.getEndBlock + ",curtermid=" + tm.getTermId + ",curblock=" + cn.getCurBlock);
+          DCtrl.coMinerByUID.map(p => {
+            if (p._2.getTermId > tm.getTermId && p._2.getTermStartBlock >= cn.getCurBlock) {
+              log.debug("cannot vote:sign=" + p._2.getTermSign + ",termid=" + p._2.getTermId + ",startblk=" + p._2.getTermStartBlock + ",endblk=" + p._2.getTermEndBlock + "->" + p._2.getBcuid + ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
+              canvote = false;
+            }
+          })
+      }
+    }
+
+    if (canvote && quantifyminers.size > 0) {
+
       val newterm = PSDutyTermVote.newBuilder();
       val conodescount = Math.min(quantifyminers.size, DConfig.DTV_MAX_SUPER_MINER);
       val mineBlockCount = DConfig.DTV_MUL_BLOCKS_EACH_TERM * conodescount * DConfig.DTV_BLOCKS_EACH_MINER;
@@ -421,7 +425,7 @@ object DTask_DutyTermVote extends LogHelper {
         + ",tm_end_past=" + JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) + ",lastsig=" + tm.getSign
         + ",sec,vN=" + DCtrl.coMinerByUID.size + ",cN=" + conodescount + ",sign=" + newterm.getSign + ",mineQ=" + newterm.getMinerQueueList.foldLeft("")((a, b) => a + "\n\t" + b.getBlockHeight + "=" + b.getMinerCoaddr))
       DCtrl.instance.vote_Request = newterm;
-      network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), msgid,'9');
+      network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), msgid, '9');
       true
     } else {
       log.debug("No more quaitify node can vote:");

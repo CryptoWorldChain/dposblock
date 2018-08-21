@@ -41,7 +41,7 @@ object DTask_MineBlock extends LogHelper with BitMap {
       
       val (isMyBlock, isOverride) = DCtrl.checkMiner(Daos.actdb.getLastBlockNumber.intValue() + 1, cn.getCoAddress, curtime,
         Thread.currentThread().getName ,DConfig.BLK_EPOCH_MS);
-      log.debug("checkMiner --> isMyBlock::" + isMyBlock + " isOverride::" + isOverride)
+      log.debug("checkMiner "+(Daos.actdb.getLastBlockNumber.intValue() + 1)+",co="+cn.getCoAddress+" --> isMyBlock::" + isMyBlock + " isOverride::" + isOverride)
 
       if (isOverride) {
         //try to vote...
