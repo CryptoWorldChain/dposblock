@@ -498,7 +498,7 @@ object DCtrl extends LogHelper {
     //    if (ov != null) {
     val blk = Daos.actdb.getBlockByNumber(block);
     if (blk != null) {
-      val b = PBlockEntry.newBuilder().setBlockHeader(blk.toByteString()).setBlockHeight(block)
+      val b = PBlockEntry.newBuilder().setBlockHeader(blk.toBuilder().clearBody().build().toByteString()).setBlockHeight(block)
       //          .setBlockHeight(block)
       //          .setSign(Hex.encodeHexString(blk.getHeader.getBlockHash.toByteArray()))
       //          .setSliceId(blk.getHeader.getSliceId.asInstanceOf[Int])
