@@ -468,7 +468,7 @@ object DCtrl extends LogHelper {
                     Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(x).toBuilder(), false);
                   }
                   log.debug("sync transaction all done total::" + retTx.getTxContentList.size());
-                  Daos.blkHelper.ApplyBlock(b.getBlockHeader)
+                  saveBlock(b)
                 }
               } finally {
               }
