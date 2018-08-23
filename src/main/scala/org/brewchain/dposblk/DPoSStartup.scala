@@ -72,7 +72,6 @@ class DPoSBGLoader() extends Runnable with LogHelper {
     }
     val naccount = Daos.actdb.getNodeAccount;
     Daos.actdb.onStart(dposnet.root().bcuid, dposnet.root().v_address, dposnet.root().name)
-
     UUIDGenerator.setJVM(dposnet.root().bcuid.substring(1))
     dposnet.changeNodeVAddr(naccount);
     log.debug("dposnet.initOK:My Node=" + dposnet.root() + ",CoAddr=" + dposnet.root().v_address

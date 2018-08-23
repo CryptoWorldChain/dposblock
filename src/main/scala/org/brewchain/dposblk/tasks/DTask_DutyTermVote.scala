@@ -339,7 +339,8 @@ object DTask_DutyTermVote extends LogHelper {
     if (quantifyminers.size > 0) {
 
       Votes.vote(quantifyminers.map(p => p._2).toList).PBFTVote({ p => Some(p.getTermSign, p.getTermId, p.getTermStartBlock, p.getTermEndBlock) }, quantifyminers.size) match {
-        case Converge((sign: String, termid: Int, startBlk: Int, endBlk: Int)) => //get termid
+        case c: Converge => //get termid
+          val (sign: String, termid: Int, startBlk: Int, endBlk: Int) = c.decision.asInstanceOf[(String, Int, Int, Int)];
           if ((StringUtils.isBlank(sign) || startBlk <= 0 || endBlk <= 0 ||
             sign.equals(tm.getSign) && termid == tm.getTermId) &&
             cn.getCurBlock >= startBlk &&
@@ -402,7 +403,7 @@ object DTask_DutyTermVote extends LogHelper {
         .setSign(msgid)
 
       val rand = Math.random() * 1000
-//      val rdns = scala.util.Random.shuffle(quantifyminers);
+      //      val rdns = scala.util.Random.shuffle(quantifyminers);
       //      log.debug(" rdns=" + rdns.foldLeft("")((a, b) => a + "," + b._1));
       var i = newterm.getBlockRange.getStartBlock;
       var bitcc = BigInt(0);
@@ -428,6 +429,10 @@ object DTask_DutyTermVote extends LogHelper {
       true
     } else {
       log.debug("No more quaitify node can vote:");
+      if (JodaTimeHelper.secondIntFromNow(cn.getLastBlockTime) > DConfig.DTV_TIMEOUT_SEC && System.currentTimeMillis() > ban_for_vote_sec) {
+        DCtrl.voteRequest().clear()
+        DCtrl.curDN().clearDutyUid();
+      }
       false
     }
   }
