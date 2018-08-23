@@ -340,7 +340,7 @@ object DTask_DutyTermVote extends LogHelper {
 
       Votes.vote(quantifyminers.map(p => p._2).toList).PBFTVote({ p => Some(p.getTermSign, p.getTermId, p.getTermStartBlock, p.getTermEndBlock) }, quantifyminers.size) match {
         case c: Converge => //get termid
-          val (sign: String, termid: Int, startBlk: Int, endBlk: Int) = c.decision.asInstanceOf[(String, Int, Int, Int)];
+          val (sign: String, termid: Long, startBlk: Int, endBlk: Int) = c.decision.asInstanceOf[(String, Long, Int, Int)];
           if ((StringUtils.isBlank(sign) || startBlk <= 0 || endBlk <= 0 ||
             sign.equals(tm.getSign) && termid == tm.getTermId) &&
             cn.getCurBlock >= startBlk &&
