@@ -30,6 +30,8 @@ import org.brewchain.dposblk.utils.DConfig
 import scala.collection.JavaConversions._
 import scala.collection.mutable.Map
 import org.brewchain.dposblk.pbgens.Dposblock.PDNode
+import scala.collection.mutable.ListBuffer
+import org.brewchain.dposblk.tasks.Scheduler
 
 @NActorProvider
 @Instantiate
@@ -89,16 +91,17 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               //                  StringUtils.equals(p._2.getTermSign, tm.getLastTermUid)))
               //                  ) {
               if (p._2.getCoAddress.equals(pbo.getCoAddress)
-                || (p._2.getCurBlock >= tm.getBlockRange.getStartBlock - 1 - Math.abs(DConfig.BLOCK_DISTANCE_COMINE)
+                || (p._2.getCurBlock <= pbo.getBlockRange.getStartBlock // 1 - Math.abs(DConfig.BLOCK_DISTANCE_COMINE)
                   &&
-                  (pbo.getLastTermId >= p._2.getTermId || pbo.getTermId >= p._2.getTermId)
-                  &&
-                  (
-                    StringUtils.isBlank(pbo.getLastTermUid) && StringUtils.isBlank(p._2.getLastTermSign)
-                    ||
-                    StringUtils.equals(p._2.getTermSign, pbo.getSign)
-                    ||
-                    StringUtils.equals(p._2.getTermSign, pbo.getLastTermUid)))) {
+                  (pbo.getLastTermId <= p._2.getTermId || pbo.getTermId > p._2.getTermId) //                  &&
+                  //                  (
+                  //                    StringUtils.isBlank(pbo.getLastTermUid) && StringUtils.isBlank(p._2.getLastTermSign)
+                  //                    ||
+                  //                    StringUtils.equals(p._2.getTermSign, pbo.getSign)
+                  //                    ||
+                  //                    StringUtils.equals(p._2.getTermSign, pbo.getLastTermUid)
+                  //                    )
+                  )) {
                 true
               } else {
                 log.debug("unquantifyminers:" + p._2.getBcuid + "," + p._2.getCoAddress + ",pblock=" + p._2.getCurBlock
@@ -109,17 +112,29 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               {
                 quantifyMinerByCoAddr.put(f._2.getCoAddress, f._2);
               })
+            val lostInMiner = ListBuffer[String]();
             val q = pbo.getMinerQueueList.filter { f =>
               if (f.getMinerCoaddr.equals(cn.getCoAddress)) {
                 inMinerList = true;
               }
-
+              val nodeInDnodes = net.directNodeByBcuid.map(cf => cf._2.v_address.equals(f.getMinerCoaddr));
+              val nodeInCoMiner = DCtrl.coMinerByUID.map(cf => cf._2.getCoAddress.equals(f.getMinerCoaddr));
+              if (nodeInDnodes.size == 0 && nodeInCoMiner == 0) {
+                log.debug("unquantifyminers: " + f.getMinerCoaddr + " not in Dnode and Cominer");
+                quantifyMinerByCoAddr.remove(f.getMinerCoaddr)
+              } else if (nodeInDnodes.size > 0 && nodeInCoMiner == 0) {
+                log.debug("add dnode to:CoMiner " + f.getMinerCoaddr);
+                lostInMiner.append(f.getMinerCoaddr)
+              }
               if (!quantifyMinerByCoAddr.contains(f.getMinerCoaddr)) {
                 //                log.debug("UNQuantifyNode:" + f.getMinerCoaddr);
                 true;
               } else {
                 false
               }
+            }
+            if (lostInMiner.size > 0) {
+              Scheduler.runOnce(DCtrl.instance.hbTask);
             }
             val reject =
               if (pbo.getBlockRange.getStartBlock != tm.getBlockRange.getEndBlock + 1 && tm.getTermId > 0
@@ -199,7 +214,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               }
               //
             }
-          } else {
+          } else {//line:83
             val nfino = if (pbo.getRewriteTerm != null) {
               "[" + pbo.getRewriteTerm.getBlockLost + "]"
             } else {

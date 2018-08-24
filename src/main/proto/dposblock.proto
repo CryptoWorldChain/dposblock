@@ -23,6 +23,8 @@ enum PCommand {
 	BRT = 8; //同步交易
 	SRT = 9; //同步单笔交易
 
+	BRJ = 10;//拒绝coinbase
+	
 	TTT = 30;//ping,pong,wall ,testing
 };
 
@@ -119,6 +121,19 @@ message  PRetCoinbase{
 	CoinbaseResult	result = 5;
 	string 		bcuid = 10;//节点
 	
+	string 	message_id = 30;
+}
+
+message  PSRejectCoinbase{
+	int64 	term_id = 1;
+	string 	co_address = 2;
+	int64 	cws_rewards = 3;
+	int32	block_height = 4;
+	int32	slice_id = 5;
+	string	block_hash = 6;
+	string	term_sign = 8;
+	string 	from_bcuid = 10;//节点
+	int64	mine_time = 11;
 	string 	message_id = 30;
 }
 

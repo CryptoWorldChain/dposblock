@@ -29,6 +29,7 @@ import org.brewchain.dposblk.pbgens.Dposblock.PDNode
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ConcurrentHashMap
+import java.lang.Long
 
 //获取其他节点的term和logidx，commitidx
 object DTask_DutyTermVote extends LogHelper {
@@ -58,7 +59,8 @@ object DTask_DutyTermVote extends LogHelper {
   def checkPossibleTerm(vq: PSDutyTermVote.Builder)(implicit network: Network): Boolean = {
     var hasConverge = false;
     possibleTermID.map(f => {
-      if (DCtrl.coMinerByUID.containsKey(f._2)) {
+      val bcuid = f._2.split(",").apply(0);
+      if (DCtrl.coMinerByUID.containsKey(bcuid)) {
         val records = Daos.dposvotedb.listBySecondKey("D" + f._1);
         val reclist: Buffer[PDutyTermResult.Builder] = records.get.map { p =>
           PDutyTermResult.newBuilder().mergeFrom(p.getValue.getExtdata);
@@ -131,10 +133,10 @@ object DTask_DutyTermVote extends LogHelper {
           + ",N=" + dbtempvote.getCoNodes);
         if (StringUtils.equals(dbtempvote.getSign, sign)) {
           if (dbtempvote.getTermId > DCtrl.termMiner().getTermId) {
-            val result = Votes.vote(votelist.filter { p => dbtempvote.getMinerQueueList.filter { x => p.getVoteAddress.equals(x.getMinerCoaddr) }.size > 0 })
+            val result = Votes.vote(votelist) //.filter { p => dbtempvote.getMinerQueueList.filter { x => p.getVoteAddress.equals(x.getMinerCoaddr) }.size > 0 })
               .PBFTVote({ p =>
                 Some(p.getResult)
-              }, dbtempvote.getCoNodes) match {
+              }, DCtrl.coMinerByUID.size) match {
                 case Converge(n) =>
                   //          log.debug("converge:" + n); 
                   if (n == VoteResult.VR_GRANTED //&& System.currentTimeMillis() - dbtempvote.getTermStartMs < DConfig.MAX_TIMEOUTSEC_FOR_REVOTE
@@ -173,7 +175,7 @@ object DTask_DutyTermVote extends LogHelper {
                     clearRecords(votelist);
                   } else {
                     //resend vote..
-                    if (dbtempvote.getSign.equals(vq.getSign)) {
+                    if (dbtempvote.getSign.equals(vq.getSign) && votelist.size < DCtrl.coMinerByUID.size * 2 / 3) {
                       log.debug("resend revote message");
                       network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), vq.getMessageId, '9');
                     }
@@ -276,16 +278,31 @@ object DTask_DutyTermVote extends LogHelper {
           log.debug("cannot vote:term miner queue not include current:" + cn.getCoAddress);
           canvote = false;
         }
-        if (canvote) {
+        //check if possible term large than mine.
+        val termMaxThanSelf = if (DCtrl.coMinerByUID.size < 3) {
+          possibleTermID.filter(f => {
+            val arrass = f._2.split(",");
+            if (f._1 > tm.getTermId && Long.parseLong(arrass(1)) > cn.getCurBlock) {
+              log.debug("get termid than self:" + f._2 + ",curTerm=" + tm.getTermEndMs + ",cur.blk=" + cn.getCurBlock + ",cominersize=" + DCtrl.coMinerByUID.size);
+              true
+            } else {
+              false
+            }
+          }).size
+        } else { 0 };
+        if (canvote && termMaxThanSelf <= 0) {
           //      log.debug("try vote new term:");
-          if (VoteTerm(network)) {
+          if (checkPossibleTerm(vq)) {
+            log.debug("get possible term:");
+            true
+          } else if (VoteTerm(network)) {
             false
           } else {
             checkVoteDB(vq)
           }
         } else {
           log.debug("cannot vote Sec=" + JodaTimeHelper.secondIntFromNow(tm.getTermEndMs) + ",DV=" + DConfig.DTV_TIMEOUT_SEC
-            + ",co=" + tm.getCoNodes);
+            + ",co=" + tm.getCoNodes + ",termMax:=" + termMaxThanSelf);
           checkVoteDB(vq, maxtermid)
         }
       } else {
@@ -295,7 +312,6 @@ object DTask_DutyTermVote extends LogHelper {
     })
   }
   def VoteTerm(implicit network: Network, omitCoaddr: String = "", overridedBlock: Int = 0): Boolean = {
-
     val msgid = UUIDGenerator.generate();
     MDCSetMessageID(msgid);
     DCtrl.coMinerByUID.filter(p => {
@@ -324,12 +340,9 @@ object DTask_DutyTermVote extends LogHelper {
           (
             p._2.getCurBlock >= tm.getBlockRange.getStartBlock - 1 - Math.abs(DConfig.BLOCK_DISTANCE_COMINE)
             &&
-            (tm.getLastTermId == p._2.getTermId || tm.getTermId >= p._2.getTermId)
-            &&
-            (
-              StringUtils.isBlank(tm.getSign)
-              ||
-              StringUtils.isNotBlank(p._2.getTermSign) &&
+            (tm.getLastTermId == p._2.getTermId || tm.getTermId <= p._2.getTermId) &&
+            (StringUtils.isBlank(tm.getSign)
+              || StringUtils.isNotBlank(p._2.getTermSign) &&
               (StringUtils.equals(p._2.getTermSign, tm.getSign) ||
                 StringUtils.equals(p._2.getTermSign, tm.getSign)))))) {
         true
@@ -342,6 +355,7 @@ object DTask_DutyTermVote extends LogHelper {
         false;
       })
     var canvote = true;
+    var highest = cn.getCurBlock;
     if (quantifyminers.size > 0) {
 
       Votes.vote(quantifyminers.map(p => p._2).toList).PBFTVote({ p => Some(p.getTermSign, p.getTermId, p.getTermStartBlock, p.getTermEndBlock) }, quantifyminers.size) match {
@@ -354,8 +368,8 @@ object DTask_DutyTermVote extends LogHelper {
           } else {
             canvote = false;
             log.debug("can not vote: pbft converge but not equals to local :sign=" + sign + ",curtermsign=" + tm.getSign
-                + ",termid=" + termid  + ",curtermid=" + tm.getTermId+ ",startBlk=" +
-              startBlk + ",endBlk=" + endBlk  + ",curblock=" + cn.getCurBlock);
+              + ",termid=" + termid + ",curtermid=" + tm.getTermId + ",startBlk=" +
+              startBlk + ",endBlk=" + endBlk + ",curblock=" + cn.getCurBlock);
           }
         case n @ _ => //cannot converge, find the max size.
           log.debug("can not merge: " + n + ",curtermsign=" + tm.getSign + ",startBlk=" +
@@ -365,11 +379,14 @@ object DTask_DutyTermVote extends LogHelper {
               log.debug("cannot vote:sign=" + p._2.getTermSign + ",termid=" + p._2.getTermId + ",startblk=" + p._2.getTermStartBlock + ",endblk=" + p._2.getTermEndBlock + "->" + p._2.getBcuid + ",tm.termid=" + tm.getTermId + ",vq.termid=" + vq.getTermId);
               canvote = false;
             }
+            if (p._2.getCurBlock > highest) {
+              highest = p._2.getCurBlock;
+            }
           })
       }
     }
 
-    if (canvote && quantifyminers.size > 0) {
+    if (canvote && (quantifyminers.size >= DCtrl.coMinerByUID.size * 2 / 3) || cn.getCurBlock == highest) {
 
       val newterm = PSDutyTermVote.newBuilder();
       val conodescount = Math.min(quantifyminers.size, DConfig.DTV_MAX_SUPER_MINER);

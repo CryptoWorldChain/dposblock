@@ -183,8 +183,9 @@ case class DPosNodeController(network: Network) extends SRunner with PMNodeHelpe
           + ",CA=" + cur_dnode.getCoAddress
           + ",BCUID=" + term_Miner.getBcuid
           + ",MN=" + DCtrl.coMinerByUID.size
-          + ",RN=" + network.bitenc.bits.bitCount
+          + ",DN=" + network.bitenc.bits.bitCount
           + ",CN=" + term_Miner.getCoNodes
+          + ",PN=" + network.pendingNodeByBcuid.size
           + ",DU=" + cur_dnode.getDutyUid
           + ",VT=" + vote_Request.getTermId
           + ",TM=" + term_Miner.getTermId
@@ -326,7 +327,7 @@ object DCtrl extends LogHelper {
         + termMiner.getSign + ",TID=" + termMiner.getTermId)
       val maxblk = Math.max(block, tm.getEndBlock)
       log.debug("checkMiner --> maxblk::" + maxblk + " curDN.getCurBlock::" + curDN.getCurBlock)
-      if (maxblk > curDN.getCurBlock && System.currentTimeMillis() > blkshouldMineMS + DConfig.BLK_EPOCH_MS) {
+      if (maxblk > curDN.getCurBlock && System.currentTimeMillis() > blkshouldMineMS + DConfig.BLK_EPOCH_MS*2) {
         val fastuid = DCtrl.getFastNode();
         if (!StringUtils.equals(fastuid, curDN.getBcuid)) {
           BlockSync.tryBackgroundSyncLogs(maxblk, fastuid)(DCtrl.dposNet())
@@ -372,7 +373,7 @@ object DCtrl extends LogHelper {
                 Thread.sleep(Math.min(maxWaitMS, blkshouldMineMS - realblkMineMS));
               } else {
                 //request block if not sync
-                if (System.currentTimeMillis() > blkshouldMineMS + DConfig.BLK_EPOCH_MS) {
+                if (System.currentTimeMillis() > blkshouldMineMS + DConfig.BLK_EPOCH_MS*2) {
                   var bestfastUID = ""
                   coMinerByUID.map { f =>
                     if (f._2.getCoAddress.equals(n)) {
@@ -412,7 +413,7 @@ object DCtrl extends LogHelper {
     Daos.blkHelper.synchronized({
       val newblk = Daos.blkHelper.CreateNewBlock(DCtrl.termMiner().getMaxTnxEachBlock, //只是打块！其中某些成功广播的tx，默认是80%
         (DCtrl.coMinerByUID.size * DConfig.CREATE_BLOCK_TX_CONFIRM_PERCENT / 100).asInstanceOf[Int],
-        "");
+        "",DCtrl.termMiner().getSign);
       val newblockheight = curDN().getCurBlock + 1
       if (newblk == null || newblk.getHeader == null) {
         log.debug("new block header is null: ch=" + newblockheight + ",dbh=" + newblk);
