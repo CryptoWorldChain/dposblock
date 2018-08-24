@@ -348,13 +348,14 @@ object DTask_DutyTermVote extends LogHelper {
         case c: Converge => //get termid
           val (sign: String, termid: Long, startBlk: Int, endBlk: Int) = c.decision.asInstanceOf[(String, Long, Int, Int)];
           if (((StringUtils.isBlank(sign) || sign.equals(tm.getSign) && termid == tm.getTermId) &&
-            cn.getCurBlock >= startBlk &&
+            cn.getCurBlock >= startBlk - 1 - DConfig.DTV_BEFORE_BLK &&
             cn.getCurBlock <= endBlk) || startBlk <= 0 || endBlk <= 0) {
             canvote = true;
           } else {
             canvote = false;
-            log.debug("can not vote: pbft converge but not equals to local :sign=" + sign + ",termid=" + termid + ",startBlk=" +
-              startBlk + ",endBlk=" + endBlk + ",curtermid=" + tm.getTermId + ",curblock=" + cn.getCurBlock);
+            log.debug("can not vote: pbft converge but not equals to local :sign=" + sign + ",curtermsign=" + tm.getSign
+                + ",termid=" + termid  + ",curtermid=" + tm.getTermId+ ",startBlk=" +
+              startBlk + ",endBlk=" + endBlk  + ",curblock=" + cn.getCurBlock);
           }
         case n @ _ => //cannot converge, find the max size.
           log.debug("can not merge: " + n + ",curtermsign=" + tm.getSign + ",startBlk=" +
