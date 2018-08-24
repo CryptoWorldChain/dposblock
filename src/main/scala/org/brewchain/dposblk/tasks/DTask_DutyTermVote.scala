@@ -171,6 +171,12 @@ object DTask_DutyTermVote extends LogHelper {
                     log.debug("clear timeout vote after:" + JodaTimeHelper.secondFromNow(dbtempvote.getTermStartMs) + ",max=" + DConfig.MAX_TIMEOUTSEC_FOR_REVOTE * 1000 + ",sign=" + dbtempvote.getSign
                       + ",dbsize=" + votelist.size)
                     clearRecords(votelist);
+                  } else {
+                    //resend vote..
+                    if (dbtempvote.getSign.equals(vq.getSign)) {
+                      log.debug("resend revote message");
+                      network.dwallMessage("DTVDOB", Left(DCtrl.voteRequest().build()), vq.getMessageId, '9');
+                    }
                   }
                   false
                 case n: NotConverge =>
@@ -341,10 +347,9 @@ object DTask_DutyTermVote extends LogHelper {
       Votes.vote(quantifyminers.map(p => p._2).toList).PBFTVote({ p => Some(p.getTermSign, p.getTermId, p.getTermStartBlock, p.getTermEndBlock) }, quantifyminers.size) match {
         case c: Converge => //get termid
           val (sign: String, termid: Long, startBlk: Int, endBlk: Int) = c.decision.asInstanceOf[(String, Long, Int, Int)];
-          if ((StringUtils.isBlank(sign) || startBlk <= 0 || endBlk <= 0 ||
-            sign.equals(tm.getSign) && termid == tm.getTermId) &&
+          if (((StringUtils.isBlank(sign) || sign.equals(tm.getSign) && termid == tm.getTermId) &&
             cn.getCurBlock >= startBlk &&
-            cn.getCurBlock <= endBlk) {
+            cn.getCurBlock <= endBlk) || startBlk <= 0 || endBlk <= 0) {
             canvote = true;
           } else {
             canvote = false;
