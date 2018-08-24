@@ -37,7 +37,7 @@ object DTask_DutyTermVote extends LogHelper {
   var ban_for_vote_sec = 0L;
   def sleepToNextVote(): Unit = {
     val ban_sec = (Math.abs(Math.random() * 100000 % (DConfig.BAN_MAXSEC_FOR_VOTE_REJECT - DConfig.BAN_MINSEC_FOR_VOTE_REJECT)) +
-      DConfig.BAN_MINSEC_FOR_VOTE_REJECT).asInstanceOf[Long]
+      DConfig.BAN_MINSEC_FOR_VOTE_REJECT).longValue()
     //    log.debug("Undecisible but not converge.ban sleep=" + ban_sec)
     log.debug("ban for vote sleep:" + ban_sec + " seconds");
     ban_for_vote_sec = System.currentTimeMillis() + ban_sec * 1000;
@@ -151,6 +151,11 @@ object DTask_DutyTermVote extends LogHelper {
                     DCtrl.instance.updateTerm()
                     hasConverge = true;
                     clearRecords(votelist);
+                    //remove cominer
+                    if (DCtrl.coMinerByUID.size > dbtempvote.getCoNodes) {
+                      log.debug("run re recheck heatbeat right now:MN=" + DCtrl.coMinerByUID.size + ",CN=" + dbtempvote.getCoNodes);
+                      Scheduler.runOnce(DCtrl.instance.hbTask)
+                    }
                     true
                   } else if (n == VoteResult.VR_REJECT) {
                     clearRecords(votelist);

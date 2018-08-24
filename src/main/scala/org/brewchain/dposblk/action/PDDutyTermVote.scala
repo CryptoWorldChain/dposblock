@@ -148,6 +148,12 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
                     + ",PA=" + pbo.getCoAddress + ",CA=" + cn.getCoAddress + ",qsize=" + q.size);
                   ret.setResult(VoteResult.VR_REJECT)
                   true
+                } else if (pbo.getTermId > tm.getTermId &&
+                  pbo.getBlockRange.getStartBlock > cn.getCurBlock &&
+                  (pbo.getBlockRange.getStartBlock > tm.getBlockRange.getEndBlock || pbo.getBlockRange.getStartBlock < tm.getBlockRange.getStartBlock)) {
+                  log.debug("check vote block too large:" + pbo.getBlockRange.getStartBlock + ",[" + tm.getBlockRange.getStartBlock + "," + tm.getBlockRange.getEndBlock + "],sign="
+                    + tm.getSign + ",TID=" + tm.getTermId + ",pib=" + pbo.getTermId + ",curblock=" + cn.getCurBlock)
+                  false;
                 } else {
                   //check rewrite
                   log.debug("checkMiner --> dutytermvote pbo.getBlockRange.getStartBlock::" + pbo.getBlockRange.getStartBlock);
@@ -214,7 +220,7 @@ object PDDutyTermVoteService extends LogHelper with PBUtils with LService[PSDuty
               }
               //
             }
-          } else {//line:83
+          } else { //line:83
             val nfino = if (pbo.getRewriteTerm != null) {
               "[" + pbo.getRewriteTerm.getBlockLost + "]"
             } else {
