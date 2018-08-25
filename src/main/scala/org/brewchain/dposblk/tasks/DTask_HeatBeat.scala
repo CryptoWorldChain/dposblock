@@ -195,7 +195,7 @@ case class DTask_HeatBeat() extends SRunner with PMNodeHelper with LogHelper {
             cdl.await(10, TimeUnit.SECONDS);
           } catch {
             case t: Throwable =>
-              log.debug("send SYNC-JINDOB ERROR " + n.uri + ",bcuid=" + n.bcuid + ",e=" + t, t)
+              log.debug("send SYNC-JINDOB ERROR " + n.uri + ",bcuid=" + n.bcuid + ",e=" + t)
               DCtrl.coMinerByUID.remove(n.bcuid);
           }
         } else { //not found in dnode.
