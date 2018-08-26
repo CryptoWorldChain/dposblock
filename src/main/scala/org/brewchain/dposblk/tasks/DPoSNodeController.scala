@@ -38,6 +38,7 @@ import org.brewchain.account.util.ByteUtil
 import java.util.concurrent.TimeUnit
 import org.brewchain.bcapi.exec.SRunner
 import org.fc.brewchain.p22p.action.PMNodeHelper
+import java.math.BigInteger
 
 //投票决定当前的节点
 case class DPosNodeController(network: Network) extends SRunner with PMNodeHelper with LogHelper {
@@ -346,9 +347,10 @@ object DCtrl extends LogHelper {
           if (coaddr.equals(n)) {
             //if (DCtrl.termMiner().getMinerQueue(101-DCtrl.termMiner().getBlockRange.getStartBlock).getBlockHeight == block + 1) {
             if (realblkMineMS < blkshouldMineMS) {
-              if (Daos.txHelper.getOConfirmMapDB.getConfirmQueue.size() > DConfig.WAIT_BLOCK_MIN_TXN) {
-                if (realblkMineMS < minblkshouldMineMS) {
-                  log.debug("wait for time to My Miner:txsize=" + Daos.txHelper.getOConfirmMapDB.getConfirmQueue.size() + ":Should=" + minblkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockMS=" + tm.getEachBlockMs + ",TermLeft=" + termblockLeft
+              val pendingSize = Daos.txHelper.getOConfirmMapDB.getConfirmQueue.size();
+              if (pendingSize >= DConfig.WAIT_BLOCK_MIN_TXN) {
+                if (realblkMineMS < minblkshouldMineMS && pendingSize < DConfig.WAIT_BLOCK_MAX_TXN) {
+                  log.debug("wait for time to My Miner:txsize=" + pendingSize + ":Should=" + minblkshouldMineMS + ",realblkminesec=" + realblkMineMS + ",eachBlockMS=" + tm.getEachBlockMs + ",TermLeft=" + termblockLeft
                     + ",TID=" + termMiner().getTermId + ",TS=" + termMiner().getSign + ",bh=" + block);
                   sleep(Math.min(maxWaitMS, minblkshouldMineMS - realblkMineMS));
                 }
@@ -439,13 +441,13 @@ object DCtrl extends LogHelper {
     })
 
   }
-  def saveBlock(b: PBlockEntryOrBuilder): (Int, Int) = {
+  def saveBlock(b: PBlockEntryOrBuilder, reentry: Int = 0): (Int, Int) = {
     Daos.blkHelper.synchronized({
       if (!b.getCoinbaseBcuid.equals(DCtrl.curDN().getBcuid)) {
         val res = Daos.blkHelper.ApplyBlock(b.getBlockHeader);
 
-        if (res.getTxHashsCount > 0) {
-          log.debug("must sync transaction first.");
+        if (res.getTxHashsCount > 0 && reentry < 3) {
+          log.debug("must sync transaction first.:reentry=" + reentry);
           val reqTx = PSGetTransaction.newBuilder();
           for (txHash <- res.getTxHashsList) {
             reqTx.addTxHash(txHash);
@@ -477,11 +479,11 @@ object DCtrl extends LogHelper {
                   null;
                 }
                 if (retTx != null) {
-                  for (x <- retTx.getTxContentList) {
-                    Daos.txHelper.syncTransaction(MultiTransaction.parseFrom(x).toBuilder(), false);
-                  }
+                  val txlist = retTx.getTxContentList.map { MultiTransaction.newBuilder().mergeFrom(_) }
+                  Daos.txHelper.syncTransaction(txlist.toList, false,
+                    new BigInteger("0").setBit(oNetwork.get.node_idx));
                   log.debug("sync transaction all done total::" + retTx.getTxContentList.size());
-                  saveBlock(b)
+                  saveBlock(b, reentry + 1)
                 }
               } finally {
               }
@@ -489,7 +491,7 @@ object DCtrl extends LogHelper {
             def onFailed(e: java.lang.Exception, fp: FramePacket) {
               log.debug("sync transaction error::" + e.getMessage, e)
             }
-          }, '8')
+          }, '9')
           //} 
           //})
         }
