@@ -10,7 +10,9 @@ object DConfig {
   val _DBLK_EPOCH_SEC = prop.get(PROP_DOMAIN + "blk.epoch.sec", 1); //2 seconds each block
   val BLK_EPOCH_MS = prop.get(PROP_DOMAIN + "blk.epoch.ms", 500); //2 seconds each block
   val BLK_NOOP_EPOCH_MS = prop.get(PROP_DOMAIN + "blk.noop.epoch.ms", 5000); //2 seconds each block
+  val BLK_MIN_EPOCH_MS = prop.get(PROP_DOMAIN + "blk.min.epoch.ms", 100); //2 seconds each block
 
+  
   val TXS_EPOCH_MS = prop.get(PROP_DOMAIN + "txs.epoch.ms", 500);
   val MAX_WAIT_BLK_EPOCH_MS = prop.get(PROP_DOMAIN + "max.wait.blk.epoch.ms", 10 * 1000); //1 min to wait for next block mine 
 
@@ -74,7 +76,10 @@ object DConfig {
   val SYNC_SAFE_BLOCK_COUNT = prop.get(PROP_DOMAIN + "sync.safe.block.count", 8);
   
   
-  val SYNC_TX_TPS_LIMIT = prop.get(PROP_DOMAIN + "sync.tx.tps.limit", 10000);//每秒钟最多1万笔交易同步
+  val SYNC_TX_TPS_LIMIT = prop.get(PROP_DOMAIN + "sync.tx.tps.limit", 50000);//每秒钟最多1万笔交易同步
 
+  val WAIT_BLOCK_MIN_TXN = prop.get(PROP_DOMAIN + "wait.block.min.txn", 100);//至少100笔以上就不等了
+
+    
   val CREATE_BLOCK_TX_CONFIRM_PERCENT = prop.get(PROP_DOMAIN + "create.block.tx.confirm.percent", 80); //80%
 }

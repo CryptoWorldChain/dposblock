@@ -180,7 +180,7 @@ case class DTask_HeatBeat() extends SRunner with PMNodeHelper with LogHelper {
                     DCtrl.coMinerByUID.put(retjoin.getDn.getBcuid, retjoin.getDn);
                   }
                 } else {
-                  log.debug("send SYNC-JINDOB Failed " + n.uri + ",bcuid=" + n.bcuid + ",retobj=" + retjoin)
+                  log.debug("send SYNC-JINDOB Failed uri=" + n.uri + ",bcuid=" + n.bcuid+",code="+retjoin.getRetCode())
                 }
               } finally {
               }
